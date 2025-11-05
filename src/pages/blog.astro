@@ -1,0 +1,149 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+
+// This is a placeholder. In the future, you can connect to a CMS or markdown files
+const posts = [
+  {
+    title: 'Welcome to Keep Choosing Good',
+    excerpt: 'Discover how small choices can lead to meaningful change in your life and community.',
+    date: '2025-11-05',
+    slug: 'welcome-to-keep-choosing-good',
+  },
+  {
+    title: 'The Power of Daily Habits',
+    excerpt: 'Learn how building positive daily habits compounds into lasting transformation.',
+    date: '2025-11-04',
+    slug: 'power-of-daily-habits',
+  },
+  {
+    title: 'Building a Supportive Community',
+    excerpt: 'Why surrounding yourself with positive influences matters more than you think.',
+    date: '2025-11-03',
+    slug: 'building-supportive-community',
+  },
+];
+---
+
+<BaseLayout
+  title="Blog - Keep Choosing Good"
+  description="Read our latest articles on making positive choices and creating meaningful change"
+>
+  <main>
+    <div class="blog-page">
+      <div class="container">
+        <header class="page-header">
+          <h1>Blog</h1>
+          <p class="lead">Insights, stories, and inspiration for choosing good</p>
+        </header>
+
+        <div class="posts-grid">
+          {posts.map((post) => (
+            <article class="post-card">
+              <time datetime={post.date}>
+                {new Date(post.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+              <h2>
+                <a href={`/blog/${post.slug}`}>{post.title}</a>
+              </h2>
+              <p>{post.excerpt}</p>
+              <a href={`/blog/${post.slug}`} class="read-more">
+                Read more →
+              </a>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .blog-page {
+    min-height: 100vh;
+    padding: 4rem 0;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .page-header h1 {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+
+  .lead {
+    font-size: 1.25rem;
+    color: var(--color-text-light);
+  }
+
+  .posts-grid {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .post-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  time {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .post-card h2 {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .post-card h2 a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .post-card h2 a:hover {
+    color: var(--color-primary);
+  }
+
+  .post-card p {
+    color: var(--color-text-light);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .read-more {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .read-more:hover {
+    text-decoration: underline;
+  }
+</style>

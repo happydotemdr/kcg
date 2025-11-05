@@ -1,0 +1,12 @@
+---
+// Google Ads (AdSense) Component
+// Get your publisher ID from https://www.google.com/adsense/
+const { GOOGLE_ADS_ID } = import.meta.env;
+---
+
+{GOOGLE_ADS_ID && (
+  <>
+    <!-- Google AdSense -->
+    <script is:inline async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADS_ID}`} crossorigin="anonymous"></script>
+  </>
+)}
