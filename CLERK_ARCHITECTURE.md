@@ -814,12 +814,13 @@ Primary Methods:
 ✓ Email + Password
 ✓ Email OTP (Magic Link)
 ✓ Google OAuth
-✓ GitHub OAuth (for developer community)
+✓ Microsoft OAuth
 
-Optional:
-○ Apple Sign In
-○ Microsoft
-○ Phone (SMS)
+Evaluating for Future:
+○ GitHub OAuth - evaluating for future
+○ Apple Sign In - evaluating for future
+○ Other providers - evaluating for future
+○ Phone (SMS) - evaluating for future
 
 Security Features:
 ✓ Email verification required
@@ -974,7 +975,7 @@ User inactive for 30 minutes →
 - [ ] Create admin dashboard (if needed)
 - [ ] Set up email template customization
 - [ ] Configure MFA options
-- [ ] Add social login providers
+- [ ] Configure social login providers (Google and Microsoft)
 
 **Deliverables:**
 - Webhook integration for user events
@@ -1135,7 +1136,7 @@ clerk({
 
 **User & Authentication:**
 - [x] Enable email/password
-- [x] Enable social providers (Google, GitHub)
+- [x] Enable social providers (Google, Microsoft)
 - [x] Set password requirements
 - [ ] Configure MFA options
 - [ ] Set session lifetime

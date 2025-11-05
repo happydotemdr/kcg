@@ -16,7 +16,8 @@ This is a condensed guide to get Clerk authentication up and running quickly. Fo
 4. Select authentication methods:
    - ✓ Email
    - ✓ Google
-   - ✓ GitHub (optional)
+   - ✓ Microsoft
+   <!-- GitHub and other providers will be evaluated in the future -->
 5. Click "Create Application"
 
 ## Step 2: Get API Keys
@@ -236,7 +237,10 @@ Then in your navigation, add:
 
 1. Go to https://dashboard.clerk.com
 2. Navigate to "User & Authentication"
-3. Enable desired social providers (Google, GitHub, etc.)
+3. Enable supported social providers:
+   - Google
+   - Microsoft
+   - Note: Other social providers will be evaluated for support in the future
 4. Customize email templates under "Emails"
 5. Set up branding under "Customization"
 

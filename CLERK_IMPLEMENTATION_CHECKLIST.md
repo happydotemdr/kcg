@@ -11,7 +11,7 @@ Track your progress implementing Clerk authentication for Keep Choosing Good.
 ### Account & Configuration
 - [ ] Create Clerk account at https://clerk.com
 - [ ] Create "Keep Choosing Good" application in Clerk Dashboard
-- [ ] Enable authentication methods (Email, Google, GitHub)
+- [ ] Enable authentication methods (Email, Google, Microsoft)
 - [ ] Copy API keys (Publishable & Secret)
 - [ ] Configure allowed redirect URLs in Clerk Dashboard
 - [ ] Set up development instance
@@ -162,10 +162,12 @@ Track your progress implementing Clerk authentication for Keep Choosing Good.
 - [ ] Enable Google OAuth in Clerk Dashboard
 - [ ] Configure Google OAuth credentials
 - [ ] Test Google sign-in flow
-- [ ] Enable GitHub OAuth (optional)
-- [ ] Configure GitHub OAuth credentials (optional)
-- [ ] Test GitHub sign-in flow (optional)
-- [ ] Add social login buttons to UI
+- [ ] Enable Microsoft OAuth in Clerk Dashboard
+- [ ] Configure Microsoft OAuth credentials
+- [ ] Test Microsoft sign-in flow
+- [ ] Add social login buttons to UI (Google & Microsoft)
+
+**Note:** Currently supporting Google and Microsoft OAuth providers. Additional social login providers (GitHub, LinkedIn, etc.) will be evaluated and potentially added in future phases based on user demand and business requirements.
 
 ### Multi-Factor Authentication
 - [ ] Enable MFA in Clerk Dashboard
