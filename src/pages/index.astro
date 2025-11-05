@@ -1,0 +1,157 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Keep Choosing Good - Home"
+  description="Welcome to Keep Choosing Good - A platform for positive change and meaningful choices"
+>
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h1>Keep Choosing Good</h1>
+        <p class="tagline">A platform for positive change and meaningful choices</p>
+        <div class="cta-buttons">
+          <a href="/about" class="button button-primary">Learn More</a>
+          <a href="/blog" class="button button-secondary">Read Our Blog</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="container">
+        <h2>Why Choose Good?</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="icon">🌟</div>
+            <h3>Positive Impact</h3>
+            <p>Make choices that create ripples of positive change in the world</p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">🎯</div>
+            <h3>Meaningful Goals</h3>
+            <p>Set and achieve goals that align with your values</p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">🤝</div>
+            <h3>Community</h3>
+            <p>Connect with others committed to making good choices</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    padding: 8rem 0;
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    margin-bottom: 1rem;
+  }
+
+  .tagline {
+    font-size: clamp(1.125rem, 2vw, 1.5rem);
+    margin-bottom: 2rem;
+    opacity: 0.95;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .button {
+    display: inline-block;
+    padding: 0.875rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+  }
+
+  .button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+  }
+
+  .button-primary {
+    background: white;
+    color: var(--color-primary);
+  }
+
+  .button-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid white;
+  }
+
+  /* Features Section */
+  .features {
+    padding: 6rem 0;
+    background: var(--color-surface);
+  }
+
+  .features h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    text-align: center;
+    margin-bottom: 3rem;
+    color: var(--color-text);
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+  }
+
+  .feature-card p {
+    color: var(--color-text-light);
+    line-height: 1.6;
+  }
+</style>

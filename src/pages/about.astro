@@ -1,0 +1,109 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="About - Keep Choosing Good"
+  description="Learn about Keep Choosing Good and our mission to inspire positive change"
+>
+  <main>
+    <article class="about-page">
+      <div class="container">
+        <header class="page-header">
+          <h1>About Keep Choosing Good</h1>
+          <p class="lead">Our mission is to inspire and empower individuals to make positive choices every day</p>
+        </header>
+
+        <section class="content">
+          <h2>Our Story</h2>
+          <p>
+            Keep Choosing Good began with a simple belief: every choice we make has the power to create positive change,
+            no matter how small. In a world filled with challenges, we wanted to create a space that encourages and
+            celebrates the decision to choose good.
+          </p>
+
+          <h2>What We Believe</h2>
+          <ul>
+            <li>Every person has the power to make a positive impact</li>
+            <li>Small, consistent choices lead to meaningful change</li>
+            <li>Community and support amplify our individual efforts</li>
+            <li>Authenticity and compassion guide our actions</li>
+          </ul>
+
+          <h2>Join Us</h2>
+          <p>
+            Whether you're looking for inspiration, resources, or a community of like-minded individuals,
+            Keep Choosing Good is here to support your journey. Together, we can create a ripple effect of
+            positive change that extends far beyond ourselves.
+          </p>
+        </section>
+      </div>
+    </article>
+  </main>
+</BaseLayout>
+
+<style>
+  .about-page {
+    min-height: 100vh;
+    padding: 4rem 0;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .page-header h1 {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+
+  .lead {
+    font-size: 1.25rem;
+    color: var(--color-text-light);
+    line-height: 1.6;
+  }
+
+  .content h2 {
+    font-size: 2rem;
+    margin: 2.5rem 0 1rem;
+    color: var(--color-text);
+  }
+
+  .content p {
+    font-size: 1.125rem;
+    line-height: 1.8;
+    color: var(--color-text-light);
+    margin-bottom: 1.5rem;
+  }
+
+  .content ul {
+    list-style: none;
+    margin: 1.5rem 0;
+  }
+
+  .content li {
+    font-size: 1.125rem;
+    line-height: 1.8;
+    color: var(--color-text-light);
+    padding-left: 2rem;
+    position: relative;
+    margin-bottom: 0.75rem;
+  }
+
+  .content li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+    font-weight: bold;
+    font-size: 1.25rem;
+  }
+</style>
