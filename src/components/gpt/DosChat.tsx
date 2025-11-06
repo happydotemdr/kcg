@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DosMessage from './DosMessage';
 import DosInput from './DosInput';
 import DosSidebar from './DosSidebar';
+import UserMenu from '../UserMenu';
 import type { Message, Conversation } from '../../types/chat';
 
 export default function DosChat() {
@@ -224,6 +225,7 @@ export default function DosChat() {
             <div className="flex items-center gap-4">
               <span className="text-green-400">═══════════════════════════════════════════════════</span>
             </div>
+            <UserMenu theme="dos" />
           </div>
           <div className="flex justify-between mt-1">
             <span className="text-green-400">

@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSidebar from './ChatSidebar';
+import UserMenu from '../UserMenu';
 import type { Message, Conversation } from '../../types/chat';
 
 export default function Chat() {
@@ -202,15 +203,18 @@ export default function Chat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-xl font-semibold text-gray-800">
-            {conversation?.title || 'New Conversation'}
-          </h1>
-          {conversation && (
-            <p className="text-sm text-gray-500 mt-1">
-              Model: {conversation.model}
-            </p>
-          )}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-xl font-semibold text-gray-800">
+              {conversation?.title || 'New Conversation'}
+            </h1>
+            {conversation && (
+              <p className="text-sm text-gray-500 mt-1">
+                Model: {conversation.model}
+              </p>
+            )}
+          </div>
+          <UserMenu theme="modern" />
         </div>
 
         {/* Messages Area */}
