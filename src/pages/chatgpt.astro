@@ -1,0 +1,201 @@
+---
+/**
+ * ChatGPT Page - DOS Terminal Theme
+ * Modern twist on classic DOS command-line interface
+ */
+import DosChat from '../components/gpt/DosChat';
+
+const title = 'ChatGPT - DOS Terminal';
+const description = 'ChatGPT with a retro DOS command-line interface';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+
+    <style is:global>
+      /* DOS Terminal Styles */
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
+
+      .dos-container {
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        background: #000000;
+        color: #00ff00;
+      }
+
+      /* CRT Screen Effect */
+      .dos-screen {
+        background: #000000;
+        position: relative;
+      }
+
+      /* Scanlines Effect */
+      .dos-scanlines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 255, 0, 0.03),
+          rgba(0, 255, 0, 0.03) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      /* CRT Glow Effect */
+      .dos-screen::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 255, 0, 0.05) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      /* Text Shadow for CRT Effect */
+      .dos-container,
+      .dos-screen {
+        text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+      }
+
+      /* Header Animation */
+      .dos-header {
+        background: linear-gradient(180deg, #001100 0%, #000000 100%);
+        animation: headerFlicker 3s infinite alternate;
+      }
+
+      @keyframes headerFlicker {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.97;
+        }
+      }
+
+      /* Scrollbar Styling */
+      .dos-screen::-webkit-scrollbar {
+        width: 12px;
+      }
+
+      .dos-screen::-webkit-scrollbar-track {
+        background: #001100;
+        border-left: 2px solid #00ff00;
+      }
+
+      .dos-screen::-webkit-scrollbar-thumb {
+        background: #00ff00;
+        border: 2px solid #000000;
+      }
+
+      .dos-screen::-webkit-scrollbar-thumb:hover {
+        background: #00cc00;
+      }
+
+      /* Blinking Cursor Animation */
+      @keyframes blink {
+        0%, 49% {
+          opacity: 1;
+        }
+        50%, 100% {
+          opacity: 0;
+        }
+      }
+
+      /* Selection Color */
+      .dos-container ::selection {
+        background: #00ff00;
+        color: #000000;
+      }
+
+      /* Link Hover Effect */
+      .dos-container a:hover {
+        text-decoration: underline;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+      }
+
+      /* Button Press Effect */
+      .dos-container button:active {
+        transform: translateY(1px);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Screen Flicker on Load */
+      @keyframes screenFlicker {
+        0%, 100% {
+          opacity: 1;
+        }
+        25% {
+          opacity: 0.9;
+        }
+        50% {
+          opacity: 1;
+        }
+        75% {
+          opacity: 0.95;
+        }
+      }
+
+      .dos-container {
+        animation: screenFlicker 0.5s ease-in-out;
+      }
+
+      /* Vintage CRT Curvature (subtle) */
+      .dos-screen {
+        border-radius: 2px;
+      }
+
+      /* Input Focus Glow */
+      .dos-container input:focus,
+      .dos-container textarea:focus {
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      }
+
+      /* Message Typing Effect */
+      @keyframes typing {
+        from {
+          width: 0;
+        }
+        to {
+          width: 100%;
+        }
+      }
+
+      /* Hide default scrollbar for Firefox */
+      .dos-screen {
+        scrollbar-width: thin;
+        scrollbar-color: #00ff00 #001100;
+      }
+
+      /* Prevent text selection on UI elements */
+      .dos-header,
+      button,
+      .dos-input-area {
+        user-select: none;
+      }
+
+      /* Allow text selection in messages */
+      .dos-screen {
+        user-select: text;
+      }
+    </style>
+  </head>
+  <body class="m-0 p-0 overflow-hidden">
+    <DosChat client:load />
+  </body>
+</html>
