@@ -9,7 +9,21 @@ import { getConversation, deleteConversation } from '../../../../lib/gpt-storage
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
     // Check authentication
-    const { userId } = (locals as any).auth();
+    let userId: string | null = null;
+    try {
+      const auth = (locals as any).auth();
+      userId = auth?.userId || null;
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({
+          error: 'Authentication service error. Please ensure CLERK_SECRET_KEY is configured.',
+          details: authError instanceof Error ? authError.message : 'Unknown error'
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!userId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -55,7 +69,21 @@ export const GET: APIRoute = async ({ params, locals }) => {
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     // Check authentication
-    const { userId } = (locals as any).auth();
+    let userId: string | null = null;
+    try {
+      const auth = (locals as any).auth();
+      userId = auth?.userId || null;
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({
+          error: 'Authentication service error. Please ensure CLERK_SECRET_KEY is configured.',
+          details: authError instanceof Error ? authError.message : 'Unknown error'
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!userId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
