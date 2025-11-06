@@ -1,21 +1,29 @@
 # Keep Choosing Good (KCG)
 
-A modern, performance-focused content website built with Astro, designed for future expansion into a full web application.
+A modern AI-powered chat application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, conversation management, and robust PostgreSQL 17 database integration.
 
 ## Features
 
-- **Built with Astro** - Lightning-fast static site generation with the islands architecture
+### AI Chat Experience
+- **Real-time Streaming** - Server-Sent Events (SSE) for instant response streaming
+- **Multimodal Support** - Upload and analyze images with Claude's vision capabilities
+- **Conversation Management** - Persistent chat history with ability to resume conversations
+- **Modern UI** - Responsive, accessible interface built with React and Tailwind CSS
+- **Context-Aware** - Intelligent conversation pruning following Anthropic's best practices
+
+### Database & Infrastructure
 - **PostgreSQL 17 Database** - Robust database integration with connection pooling
 - **Clerk.com Ready** - Pre-configured database schema for user authentication
+- **Type-safe Operations** - Repository pattern with comprehensive TypeScript definitions
+- **Migration System** - Version-controlled database schema management
+- **Built with Astro** - Fast SSR with API routes for backend functionality
 - **Analytics Ready** - Pre-configured integrations for:
   - Google Analytics 4 (GA4)
   - Google Ads / AdSense
   - Meta (Facebook) Pixel
   - Twitter/X Pixel
-- **SEO Optimized** - Meta tags, Open Graph, Twitter Cards, and canonical URLs
-- **TypeScript** - Strict type checking for reliability
-- **Responsive Design** - Mobile-first approach with modern CSS
-- **Content-Focused** - Perfect starting point for blogs, marketing sites, and content platforms
+- **TypeScript** - Full type safety across frontend and backend
+- **Responsive Design** - Mobile-first approach with Tailwind CSS
 
 ## Getting Started
 
@@ -23,7 +31,7 @@ A modern, performance-focused content website built with Astro, designed for fut
 
 - Node.js 18+
 - npm, yarn, or pnpm
-- PostgreSQL 17 (if using database features)
+- PostgreSQL 17 (optional, for database features)
 
 ### Installation
 
@@ -32,22 +40,22 @@ A modern, performance-focused content website built with Astro, designed for fut
 npm install
 ```
 
-2. Configure your analytics (optional but recommended):
+2. Configure environment variables:
    - Copy the `.env.example` file to `.env`
-   - Add your tracking IDs to `.env`:
+   - Add your Anthropic API key (required for chat functionality):
 
 ```env
-# Google Analytics 4
+# Anthropic Claude API (Required for chat)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Analytics (Optional)
 GA_MEASUREMENT_ID=G-XXXXXXXXXX
-
-# Google Ads / AdSense
 GOOGLE_ADS_ID=ca-pub-XXXXXXXXXXXXXXXX
-
-# Meta (Facebook) Pixel
 META_PIXEL_ID=1234567890
-
-# Twitter/X Pixel
 TWITTER_PIXEL_ID=o1abc
+
+# Database (Optional)
+DATABASE_URL=postgresql://username:password@localhost:5432/kcg_db
 ```
 
 3. Start the development server:
@@ -117,9 +125,9 @@ For detailed database documentation, see [DATABASE.md](DATABASE.md)
 │   │           ├── users.ts      # User operations
 │   │           └── webhooks.ts   # Webhook operations
 │   └── pages/          # File-based routing
-│       ├── index.astro  # Homepage
-│       ├── about.astro  # About page
-│       └── blog.astro   # Blog listing
+│       ├── index.astro  # Homepage with chat interface
+│       └── api/         # API endpoints
+│           └── chat.ts  # Claude AI chat endpoint
 ├── astro.config.mjs    # Astro configuration
 ├── tsconfig.json       # TypeScript configuration
 ├── DATABASE.md         # Database documentation
@@ -187,16 +195,18 @@ See the [Astro deployment docs](https://docs.astro.build/en/guides/deploy/) for 
 
 ## Future Roadmap
 
-This site is designed with future expansion in mind:
+This application is designed with future expansion in mind:
 
+- [x] **AI Chat Integration** - Real-time streaming chat with Claude
+- [x] **Database Integration** - PostgreSQL 17 with Clerk.com schema
+- [ ] Integrate Clerk.com user authentication
+- [ ] Store chat conversations in database
+- [ ] Implement user dashboard with chat history
+- [ ] Add conversation sharing capabilities
 - [ ] Add a CMS integration (Sanity, Contentful, or Markdown)
 - [ ] Implement blog post pages with dynamic routing
 - [ ] Add newsletter signup functionality
-- [x] **Database integration** - PostgreSQL 17 with Clerk.com schema
-- [ ] Integrate Clerk.com user authentication
-- [ ] Implement user dashboard
-- [ ] Add API routes for data operations
-- [ ] Expand into a full web application with interactive features
+- [ ] Expand with more AI-powered features
 
 ## Learn More About Astro
 
