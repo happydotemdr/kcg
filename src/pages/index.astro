@@ -1,5 +1,15 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
+
+export const prerender = false;
+
+// Get authentication details from Clerk
+const { userId } = (Astro.locals as any).auth();
+
+// Redirect to dashboard if authenticated
+if (userId) {
+  return Astro.redirect('/dashboard');
+}
 ---
 
 <BaseLayout
