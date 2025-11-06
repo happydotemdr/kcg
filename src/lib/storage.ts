@@ -38,6 +38,7 @@ function generateTitle(firstMessage: string): string {
  */
 export async function createConversation(
   firstMessage: Message,
+  userId: string,
   model: string = 'claude-sonnet-4-20250514',
   systemPrompt?: string
 ): Promise<Conversation> {
@@ -54,6 +55,7 @@ export async function createConversation(
 
   const conversation: Conversation = {
     id,
+    userId,
     title: generateTitle(firstText || 'New conversation'),
     messages: [firstMessage],
     createdAt: now,
@@ -105,8 +107,9 @@ export async function updateConversation(
 
 /**
  * List all conversations, sorted by most recent
+ * @param userId - Optional user ID to filter conversations by owner
  */
-export async function listConversations(): Promise<ConversationListItem[]> {
+export async function listConversations(userId?: string | null): Promise<ConversationListItem[]> {
   await ensureDataDir();
 
   try {
@@ -119,6 +122,12 @@ export async function listConversations(): Promise<ConversationListItem[]> {
       try {
         const data = await fs.readFile(path.join(DATA_DIR, file), 'utf-8');
         const conv: Conversation = JSON.parse(data);
+
+        // Filter by userId if provided
+        // Allow access if conv.userId is undefined (backward compatibility with old conversations)
+        if (userId && conv.userId !== undefined && conv.userId !== userId) {
+          continue; // Skip conversations not owned by this user
+        }
 
         // Get last message text for preview
         const lastMsg = conv.messages[conv.messages.length - 1];

@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ locals }) => {
       );
     }
 
-    const conversations = await listConversations();
+    const conversations = await listConversations(userId);
 
     return new Response(JSON.stringify(conversations), {
       status: 200,

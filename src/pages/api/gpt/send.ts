@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
     } else {
-      conversation = await createConversation(userMessage, model, systemPrompt);
+      conversation = await createConversation(userMessage, userId, model, systemPrompt);
     }
 
     // Add user message to conversation if it already existed
