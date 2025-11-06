@@ -1,6 +1,6 @@
 # Keep Choosing Good (KCG)
 
-A modern AI-powered web application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, conversation management, and secure user authentication via Clerk.com.
+A modern AI-powered web application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, conversation management, secure user authentication via Clerk.com, and robust PostgreSQL 17 database integration.
 
 ## Features
 
@@ -18,10 +18,13 @@ A modern AI-powered web application built with Astro, React, and the Anthropic C
 - **Webhook Support** - Real-time user event handling for database synchronization
 - **Role-Based Access** - Support for admin roles and custom permissions
 
-### Infrastructure
+### Database & Infrastructure
+- **PostgreSQL 17 Database** - Robust database integration with connection pooling
+- **Type-safe Operations** - Repository pattern with comprehensive TypeScript definitions
+- **Migration System** - Version-controlled database schema management
+- **Clerk.com Ready** - Pre-configured database schema for user authentication
 - **Built with Astro** - Fast hybrid rendering (SSR + SSG) with API routes
 - **Claude SDK Integration** - Using official @anthropic-ai/sdk for TypeScript
-- **File-based Storage** - JSON-based conversation persistence
 - **Analytics Ready** - Pre-configured integrations for:
   - Google Analytics 4 (GA4)
   - Google Ads / AdSense
@@ -36,6 +39,7 @@ A modern AI-powered web application built with Astro, React, and the Anthropic C
 
 - Node.js 18+
 - npm, yarn, or pnpm
+- PostgreSQL 17 (optional, for database features)
 
 ### Installation
 
@@ -57,6 +61,9 @@ PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 CLERK_WEBHOOK_SECRET=whsec_...
 
+# Database (Optional)
+DATABASE_URL=postgresql://username:password@localhost:5432/kcg_db
+
 # Analytics (Optional)
 GA_MEASUREMENT_ID=G-XXXXXXXXXX
 GOOGLE_ADS_ID=ca-pub-XXXXXXXXXXXXXXXX
@@ -75,29 +82,83 @@ npm run dev
 
 4. Open your browser to `http://localhost:4321`
 
+### Database Setup (Optional)
+
+If you want to use the database features:
+
+1. Set up PostgreSQL 17 and create a database
+2. Configure database connection in `.env`:
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/kcg_db
+```
+
+3. Initialize the database:
+```bash
+npm run db:init
+```
+
+4. (Optional) Seed with sample data:
+```bash
+npm run db:seed
+```
+
+For detailed database documentation, see [DATABASE.md](DATABASE.md)
+
 ## Available Scripts
 
+### Development
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
 - `npm run astro` - Run Astro CLI commands
+
+### Database
+- `npm run db:test` - Test database connection
+- `npm run db:init` - Initialize database schema
+- `npm run db:seed` - Seed database with sample data
 
 ## Project Structure
 
 ```
 /
 ├── public/              # Static assets (images, fonts, etc.)
+├── scripts/             # Database and utility scripts
+│   ├── db-init.ts      # Database initialization
+│   ├── db-test.ts      # Database connection test
+│   └── db-seed.ts      # Sample data seeder
 ├── src/
 │   ├── components/      # Reusable components
-│   │   └── analytics/   # Analytics and tracking components
+│   │   ├── analytics/   # Analytics and tracking components
+│   │   └── chat/        # Chat UI components
 │   ├── layouts/         # Page layouts
 │   │   └── BaseLayout.astro
+│   ├── lib/
+│   │   ├── auth-utils.ts     # Authentication utilities
+│   │   ├── claude.ts         # Claude SDK wrapper
+│   │   ├── clerk.ts          # Clerk integration
+│   │   ├── storage.ts        # Conversation storage
+│   │   └── db/              # Database module
+│   │       ├── client.ts         # Database client & pooling
+│   │       ├── config.ts         # Database configuration
+│   │       ├── types.ts          # TypeScript types
+│   │       ├── schema.sql        # PostgreSQL schema
+│   │       ├── migrations.ts     # Migration runner
+│   │       └── repositories/     # Data access layer
+│   │           ├── users.ts      # User operations
+│   │           └── webhooks.ts   # Webhook operations
 │   └── pages/          # File-based routing
-│       ├── index.astro  # Homepage
-│       ├── about.astro  # About page
-│       └── blog.astro   # Blog listing
+│       ├── index.astro        # Homepage
+│       ├── chat.astro         # Chat interface
+│       ├── dashboard/         # User dashboard
+│       ├── sign-in.astro      # Sign in page
+│       ├── sign-up.astro      # Sign up page
+│       └── api/               # API endpoints
+│           ├── chat/          # Chat API routes
+│           └── webhooks/      # Webhook handlers
 ├── astro.config.mjs    # Astro configuration
 ├── tsconfig.json       # TypeScript configuration
+├── CLAUDE.md           # AI chat architecture docs
+├── DATABASE.md         # Database documentation
 └── package.json        # Dependencies and scripts
 ```
 
@@ -185,10 +246,22 @@ Secure user authentication powered by Clerk.com:
 - ✅ Webhook integration for user events
 - ✅ Role-based access control
 
+## Database Features
+
+PostgreSQL 17 integration with production-ready architecture:
+
+- ✅ Type-safe database operations with repository pattern
+- ✅ Connection pooling for optimal performance
+- ✅ Migration system for schema management
+- ✅ Clerk.com user schema integration
+- ✅ Webhook event tracking
+
 ## Future Roadmap
 
 Additional features planned:
 
+- [ ] Store chat conversations in database (currently file-based)
+- [ ] Implement user-specific chat history in dashboard
 - [ ] Agent capabilities with tool use (calculator, search, etc.)
 - [ ] Custom system prompts per conversation
 - [ ] Model selection in UI
@@ -196,7 +269,7 @@ Additional features planned:
 - [ ] Search conversation history
 - [ ] Token usage tracking and display
 - [ ] Prompt caching for long conversations
-- [ ] Database integration for user data persistence
+- [ ] Conversation sharing capabilities
 - [ ] Organization/multi-tenancy support
 - [ ] Add a CMS integration for blog content
 - [ ] Newsletter signup functionality
