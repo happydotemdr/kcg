@@ -6,9 +6,16 @@ import '@styles/dev-dashboard.css';
 export const prerender = false;
 
 // Get authentication details from Clerk
-const { userId } = (Astro.locals as any).auth();
+// Note: This page is protected by middleware, so user should be authenticated
+let userId: string | null = null;
+try {
+  const auth = (Astro.locals as any).auth();
+  userId = auth?.userId || null;
+} catch (error) {
+  console.error('Error getting user info:', error);
+}
 
-// Redirect to sign-in if not authenticated
+// Redirect to sign-in if not authenticated (fallback check)
 if (!userId) {
   return Astro.redirect('/sign-in');
 }

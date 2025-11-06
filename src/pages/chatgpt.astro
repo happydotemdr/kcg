@@ -2,18 +2,13 @@
 /**
  * ChatGPT Page - DOS Terminal Theme
  * Modern twist on classic DOS command-line interface
+ *
+ * Note: This page is protected by Clerk middleware.
+ * Unauthenticated users are automatically redirected to /sign-in
  */
 import DosChat from '../components/gpt/DosChat';
 
 export const prerender = false;
-
-// Get authentication details from Clerk
-const { userId } = (Astro.locals as any).auth();
-
-// Redirect to sign-in if not authenticated
-if (!userId) {
-  return Astro.redirect('/sign-in?redirect_url=/chatgpt');
-}
 
 const title = 'ChatGPT - DOS Terminal';
 const description = 'ChatGPT with a retro DOS command-line interface';

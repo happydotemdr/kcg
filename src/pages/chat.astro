@@ -2,18 +2,13 @@
 /**
  * Chat Page
  * Modern AI chat experience powered by Claude
+ *
+ * Note: This page is protected by Clerk middleware.
+ * Unauthenticated users are automatically redirected to /sign-in
  */
 import ChatComponent from '../components/chat/Chat';
 
 export const prerender = false;
-
-// Get authentication details from Clerk
-const { userId } = (Astro.locals as any).auth();
-
-// Redirect to sign-in if not authenticated
-if (!userId) {
-  return Astro.redirect('/sign-in?redirect_url=/chat');
-}
 ---
 
 <!DOCTYPE html>
