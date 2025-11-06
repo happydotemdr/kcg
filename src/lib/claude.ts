@@ -9,7 +9,7 @@ import type { Message } from '../types/chat';
 
 // Initialize the Anthropic client
 const client = new Anthropic({
-  apiKey: import.meta.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 /**
@@ -84,15 +84,16 @@ export async function streamChatCompletion(
       onText(text);
     });
 
-    // Handle completion
-    stream.on('message', () => {
-      onComplete(fullText);
-    });
-
     // Handle errors
     stream.on('error', (error) => {
       onError(error);
     });
+
+    // Wait for the stream to complete and get the final message
+    await stream.finalMessage();
+
+    // Call completion handler after stream finishes
+    onComplete(fullText);
 
   } catch (error) {
     onError(error as Error);
