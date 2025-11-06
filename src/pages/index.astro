@@ -3,8 +3,15 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 
 export const prerender = false;
 
-// Get authentication details from Clerk
-const { userId } = (Astro.locals as any).auth();
+// Check authentication status (optional redirect for logged-in users)
+let userId: string | null = null;
+try {
+  const auth = (Astro.locals as any).auth();
+  userId = auth?.userId || null;
+} catch (error) {
+  // Auth check failed, user is not authenticated
+  // This is fine for the home page
+}
 
 // Redirect to dashboard if authenticated
 if (userId) {

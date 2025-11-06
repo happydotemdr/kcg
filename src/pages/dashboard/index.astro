@@ -5,16 +5,28 @@ import { UserButton } from '@clerk/astro/react';
 export const prerender = false;
 
 // Get authentication details from Clerk
-const { userId, user } = (Astro.locals as any).auth();
+// Note: This page is protected by middleware, so user should be authenticated
+let userId: string | null = null;
+let firstName = 'User';
+let email = '';
 
-// Redirect to sign-in if not authenticated
+try {
+  const auth = (Astro.locals as any).auth();
+  userId = auth?.userId || null;
+  const user = auth?.user;
+
+  // Extract user information if available
+  firstName = user?.firstName || 'User';
+  email = user?.emailAddresses?.[0]?.emailAddress || '';
+} catch (error) {
+  // If auth fails but middleware allowed access, use default values
+  console.error('Error getting user info:', error);
+}
+
+// Redirect to sign-in if not authenticated (fallback check)
 if (!userId) {
   return Astro.redirect('/sign-in');
 }
-
-// Extract user information
-const firstName = user?.firstName || 'User';
-const email = user?.emailAddresses?.[0]?.emailAddress || '';
 ---
 
 <BaseLayout title="Dashboard - Keep Choosing Good" description="Your personal dashboard">
