@@ -8,6 +8,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+export const prerender = false;
+
 const DATA_DIR_CLAUDE = path.join(process.cwd(), 'data', 'conversations');
 const DATA_DIR_GPT = path.join(process.cwd(), 'data', 'gpt-conversations');
 

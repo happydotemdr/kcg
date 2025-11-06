@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { UserButton } from '@clerk/astro/react';
+import DashboardHeader from '@components/DashboardHeader';
 
 export const prerender = false;
 
@@ -32,17 +32,7 @@ if (!userId) {
 <BaseLayout title="Dashboard - Keep Choosing Good" description="Your personal dashboard">
   <div class="dashboard">
     <!-- Header Section -->
-    <header class="dashboard-header">
-      <div class="header-content">
-        <div class="header-left">
-          <h1 class="dashboard-title">Welcome back, {firstName}!</h1>
-          <p class="dashboard-subtitle">Here's what's happening with your account today.</p>
-        </div>
-        <div class="header-right">
-          <UserButton />
-        </div>
-      </div>
-    </header>
+    <DashboardHeader firstName={firstName} client:only="react" />
 
     <!-- Main Content -->
     <main class="dashboard-content">
