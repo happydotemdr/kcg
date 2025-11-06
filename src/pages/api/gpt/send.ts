@@ -39,6 +39,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
+    // Validate API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured');
+      return new Response(
+        JSON.stringify({
+          error: 'Service configuration error',
+          details: 'OPENAI_API_KEY is not configured. Please add it to your .env file.'
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const body: ChatRequest = await request.json();
     const { conversationId, message, images, model, systemPrompt } = body;
 
