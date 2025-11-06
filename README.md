@@ -1,19 +1,27 @@
 # Keep Choosing Good (KCG)
 
-A modern, performance-focused content website built with Astro, designed for future expansion into a full web application.
+A modern AI-powered chat application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, and conversation management.
 
 ## Features
 
-- **Built with Astro** - Lightning-fast static site generation with the islands architecture
+### AI Chat Experience
+- **Real-time Streaming** - Server-Sent Events (SSE) for instant response streaming
+- **Multimodal Support** - Upload and analyze images with Claude's vision capabilities
+- **Conversation Management** - Persistent chat history with ability to resume conversations
+- **Modern UI** - Responsive, accessible interface built with React and Tailwind CSS
+- **Context-Aware** - Intelligent conversation pruning following Anthropic's best practices
+
+### Infrastructure
+- **Built with Astro** - Fast SSR with API routes for backend functionality
+- **Claude SDK Integration** - Using official @anthropic-ai/sdk for TypeScript
+- **File-based Storage** - JSON-based conversation persistence
 - **Analytics Ready** - Pre-configured integrations for:
   - Google Analytics 4 (GA4)
   - Google Ads / AdSense
   - Meta (Facebook) Pixel
   - Twitter/X Pixel
-- **SEO Optimized** - Meta tags, Open Graph, Twitter Cards, and canonical URLs
-- **TypeScript** - Strict type checking for reliability
-- **Responsive Design** - Mobile-first approach with modern CSS
-- **Content-Focused** - Perfect starting point for blogs, marketing sites, and content platforms
+- **TypeScript** - Full type safety across frontend and backend
+- **Responsive Design** - Mobile-first approach with Tailwind CSS
 
 ## Getting Started
 
@@ -29,23 +37,22 @@ A modern, performance-focused content website built with Astro, designed for fut
 npm install
 ```
 
-2. Configure your analytics (optional but recommended):
+2. Configure environment variables:
    - Copy the `.env.example` file to `.env`
-   - Add your tracking IDs to `.env`:
+   - Add your Anthropic API key (required for chat functionality):
 
 ```env
-# Google Analytics 4
+# Anthropic Claude API (Required)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Analytics (Optional)
 GA_MEASUREMENT_ID=G-XXXXXXXXXX
-
-# Google Ads / AdSense
 GOOGLE_ADS_ID=ca-pub-XXXXXXXXXXXXXXXX
-
-# Meta (Facebook) Pixel
 META_PIXEL_ID=1234567890
-
-# Twitter/X Pixel
 TWITTER_PIXEL_ID=o1abc
 ```
+
+Get your Anthropic API key from: https://console.anthropic.com/settings/keys
 
 3. Start the development server:
 ```bash
@@ -139,17 +146,33 @@ Astro can be deployed to any static hosting platform:
 
 See the [Astro deployment docs](https://docs.astro.build/en/guides/deploy/) for more options.
 
+## AI Chat Features
+
+The `/chat` page provides a complete AI chat experience:
+
+- ✅ Real-time streaming responses from Claude
+- ✅ Upload and analyze images (vision support)
+- ✅ Persistent conversation history
+- ✅ Start new chats or resume existing ones
+- ✅ Delete conversations
+- ✅ Auto-generated conversation titles
+- ✅ Responsive, modern UI with Tailwind CSS
+- ✅ Full TypeScript type safety
+
 ## Future Roadmap
 
-This site is designed with future expansion in mind:
+Additional features planned:
 
-- [ ] Add a CMS integration (Sanity, Contentful, or Markdown)
-- [ ] Implement blog post pages with dynamic routing
-- [ ] Add newsletter signup functionality
-- [ ] Integrate user authentication
-- [ ] Expand into a full web application with interactive features
-- [ ] Add database integration
-- [ ] Implement user dashboard
+- [ ] Agent capabilities with tool use (calculator, search, etc.)
+- [ ] Custom system prompts per conversation
+- [ ] Model selection in UI
+- [ ] Export conversations (JSON, Markdown)
+- [ ] Search conversation history
+- [ ] Token usage tracking and display
+- [ ] User authentication and multi-user support
+- [ ] Prompt caching for long conversations
+- [ ] Add a CMS integration for blog content
+- [ ] Newsletter signup functionality
 
 ## Learn More About Astro
 
