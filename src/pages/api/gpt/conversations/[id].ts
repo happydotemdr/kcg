@@ -11,20 +11,8 @@ export const prerender = false;
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
     // Check authentication
-    let userId: string | null = null;
-    try {
-      const auth = (locals as any).auth();
-      userId = auth?.userId || null;
-    } catch (authError) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({
-          error: 'Authentication service error. Please ensure CLERK_SECRET_KEY is configured.',
-          details: authError instanceof Error ? authError.message : 'Unknown error'
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const auth = locals.auth;
+    const userId = auth?.userId || null;
 
     if (!userId) {
       return new Response(
@@ -71,20 +59,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     // Check authentication
-    let userId: string | null = null;
-    try {
-      const auth = (locals as any).auth();
-      userId = auth?.userId || null;
-    } catch (authError) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({
-          error: 'Authentication service error. Please ensure CLERK_SECRET_KEY is configured.',
-          details: authError instanceof Error ? authError.message : 'Unknown error'
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const auth = locals.auth;
+    const userId = auth?.userId || null;
 
     if (!userId) {
       return new Response(

@@ -13,7 +13,9 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params, locals }) => {
   // Check authentication
-  const { userId } = (locals as any).auth();
+  const auth = locals.auth;
+  const userId = auth?.userId || null;
+
   if (!userId) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
@@ -57,7 +59,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   // Check authentication
-  const { userId } = (locals as any).auth();
+  const auth = locals.auth;
+  const userId = auth?.userId || null;
+
   if (!userId) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),

@@ -6,27 +6,17 @@ export const prerender = false;
 
 // Get authentication details from Clerk
 // Note: This page is protected by middleware, so user should be authenticated
-let userId: string | null = null;
-let firstName = 'User';
-let email = '';
-
-try {
-  const auth = (Astro.locals as any).auth();
-  userId = auth?.userId || null;
-  const user = auth?.user;
-
-  // Extract user information if available
-  firstName = user?.firstName || 'User';
-  email = user?.emailAddresses?.[0]?.emailAddress || '';
-} catch (error) {
-  // If auth fails but middleware allowed access, use default values
-  console.error('Error getting user info:', error);
-}
+const auth = Astro.locals.auth;
+const userId = auth?.userId || null;
 
 // Redirect to sign-in if not authenticated (fallback check)
 if (!userId) {
   return Astro.redirect('/sign-in');
 }
+
+// Extract user information if available
+const firstName = 'User'; // User info would come from Clerk's user store
+const email = ''; // User info would come from Clerk's user store
 ---
 
 <BaseLayout title="Dashboard - Keep Choosing Good" description="Your personal dashboard">
