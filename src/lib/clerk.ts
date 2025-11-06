@@ -2,7 +2,7 @@ import { createClerkClient } from '@clerk/backend';
 import type { User } from '@clerk/backend';
 
 // Initialize Clerk backend client
-const clerk = createClerkClient({ secretKey: import.meta.env.CLERK_SECRET_KEY || '' });
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY || '' });
 
 /**
  * Fetches complete user details from Clerk
