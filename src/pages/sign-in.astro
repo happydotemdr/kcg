@@ -1,0 +1,29 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { SignIn as ClerkSignIn } from '@clerk/astro/components';
+
+export const prerender = false;
+---
+
+<BaseLayout title="Sign In - Keep Choosing Good">
+  <main class="sign-in-container">
+    <ClerkSignIn
+      client:load
+      appearance={{
+        variables: {
+          colorPrimary: '#4f46e5'
+        }
+      }}
+    />
+  </main>
+</BaseLayout>
+
+<style>
+  .sign-in-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 2rem;
+  }
+</style>

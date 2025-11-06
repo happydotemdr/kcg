@@ -1,0 +1,35 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { UserProfile } from '@clerk/astro/components';
+
+export const prerender = false;
+
+const { userId } = (Astro.locals as any).auth();
+
+if (!userId) {
+  return Astro.redirect('/sign-in');
+}
+---
+
+<BaseLayout title="Profile - Keep Choosing Good">
+  <div class="profile-container">
+    <UserProfile
+      client:load
+      appearance={{
+        variables: {
+          colorPrimary: '#4f46e5'
+        }
+      }}
+    />
+  </div>
+</BaseLayout>
+
+<style>
+  .profile-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    display: flex;
+    justify-content: center;
+  }
+</style>

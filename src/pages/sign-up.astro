@@ -1,0 +1,115 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { SignUp as ClerkSignUp } from '@clerk/astro/components';
+
+export const prerender = false;
+---
+
+<BaseLayout title="Sign Up - Keep Choosing Good">
+  <main class="auth-container">
+    <div class="auth-wrapper">
+      <ClerkSignUp
+        client:load
+        appearance={{
+          elements: {
+            rootBox: 'auth-root',
+            card: 'auth-card',
+            headerTitle: 'auth-header',
+            headerSubtitle: 'auth-subtitle',
+            socialButtonsBlockButton: 'auth-social-button',
+            formButtonPrimary: 'auth-primary-button',
+            footerActionLink: 'auth-link'
+          },
+          variables: {
+            colorPrimary: '#4f46e5',
+            colorText: '#1f2937',
+            colorTextSecondary: '#6b7280',
+            colorBackground: '#ffffff',
+            colorInputBackground: '#ffffff',
+            colorInputText: '#1f2937',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+            borderRadius: '0.5rem',
+            fontSize: '1rem'
+          }
+        }}
+      />
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .auth-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.03) 0%, rgba(124, 58, 237, 0.03) 100%);
+  }
+
+  .auth-wrapper {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Global Clerk component styling */
+  :global(.auth-root) {
+    width: 100%;
+  }
+
+  :global(.auth-card) {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.auth-header) {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  :global(.auth-subtitle) {
+    color: var(--color-text-light);
+  }
+
+  :global(.auth-social-button) {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  :global(.auth-social-button:hover) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(.auth-primary-button) {
+    background-color: var(--color-primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  :global(.auth-primary-button:hover) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  :global(.auth-link) {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  :global(.auth-link:hover) {
+    text-decoration: underline;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .auth-container {
+      padding: 1rem 0.5rem;
+      min-height: 70vh;
+    }
+
+    .auth-wrapper {
+      max-width: 100%;
+    }
+  }
+</style>
