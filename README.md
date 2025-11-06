@@ -1,6 +1,6 @@
 # Keep Choosing Good (KCG)
 
-A modern AI-powered chat application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, and conversation management.
+A modern AI-powered web application built with Astro, React, and the Anthropic Claude SDK. Features a production-ready chat interface with real-time streaming, multimodal support, conversation management, and secure user authentication via Clerk.com.
 
 ## Features
 
@@ -11,8 +11,15 @@ A modern AI-powered chat application built with Astro, React, and the Anthropic 
 - **Modern UI** - Responsive, accessible interface built with React and Tailwind CSS
 - **Context-Aware** - Intelligent conversation pruning following Anthropic's best practices
 
+### Authentication & User Management
+- **Clerk.com Integration** - Production-ready authentication with social logins (Google, Microsoft)
+- **Protected Routes** - Middleware-based route protection for secure areas
+- **User Dashboard** - Personalized user dashboard with profile management
+- **Webhook Support** - Real-time user event handling for database synchronization
+- **Role-Based Access** - Support for admin roles and custom permissions
+
 ### Infrastructure
-- **Built with Astro** - Fast SSR with API routes for backend functionality
+- **Built with Astro** - Fast hybrid rendering (SSR + SSG) with API routes
 - **Claude SDK Integration** - Using official @anthropic-ai/sdk for TypeScript
 - **File-based Storage** - JSON-based conversation persistence
 - **Analytics Ready** - Pre-configured integrations for:
@@ -39,11 +46,16 @@ npm install
 
 2. Configure environment variables:
    - Copy the `.env.example` file to `.env`
-   - Add your Anthropic API key (required for chat functionality):
+   - Add your API keys and configuration:
 
 ```env
-# Anthropic Claude API (Required)
+# Anthropic Claude API (Required for chat)
 ANTHROPIC_API_KEY=sk-ant-...
+
+# Clerk Authentication (Required for auth features)
+PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
 
 # Analytics (Optional)
 GA_MEASUREMENT_ID=G-XXXXXXXXXX
@@ -52,7 +64,9 @@ META_PIXEL_ID=1234567890
 TWITTER_PIXEL_ID=o1abc
 ```
 
-Get your Anthropic API key from: https://console.anthropic.com/settings/keys
+Get your API keys from:
+- Anthropic: https://console.anthropic.com/settings/keys
+- Clerk: https://dashboard.clerk.com/
 
 3. Start the development server:
 ```bash
@@ -159,6 +173,18 @@ The `/chat` page provides a complete AI chat experience:
 - ✅ Responsive, modern UI with Tailwind CSS
 - ✅ Full TypeScript type safety
 
+## Authentication Features
+
+Secure user authentication powered by Clerk.com:
+
+- ✅ Sign up / Sign in with email
+- ✅ Social login (Google, Microsoft)
+- ✅ Protected routes and middleware
+- ✅ User dashboard at `/dashboard`
+- ✅ Profile management at `/dashboard/profile`
+- ✅ Webhook integration for user events
+- ✅ Role-based access control
+
 ## Future Roadmap
 
 Additional features planned:
@@ -169,8 +195,9 @@ Additional features planned:
 - [ ] Export conversations (JSON, Markdown)
 - [ ] Search conversation history
 - [ ] Token usage tracking and display
-- [ ] User authentication and multi-user support
 - [ ] Prompt caching for long conversations
+- [ ] Database integration for user data persistence
+- [ ] Organization/multi-tenancy support
 - [ ] Add a CMS integration for blog content
 - [ ] Newsletter signup functionality
 

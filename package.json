@@ -12,15 +12,17 @@
   "dependencies": {
     "astro": "^4.16.18",
     "@astrojs/check": "^0.9.4",
-    "@astrojs/react": "^3.6.2",
     "@astrojs/node": "^8.3.4",
+    "@astrojs/react": "^3.6.2",
     "@astrojs/tailwind": "^5.1.2",
     "@anthropic-ai/sdk": "^0.32.1",
+    "@clerk/astro": "^1.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.15",
     "markdown-it": "^14.1.0",
     "uuid": "^11.0.3",
+    "svix": "^1.40.0",
     "typescript": "^5.6.3"
   },
   "devDependencies": {
