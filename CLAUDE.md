@@ -8,27 +8,30 @@ A modern AI chat experience built with Astro and React, featuring both Claude (A
 ### Tech Stack
 - **Frontend**: Astro + React + Tailwind CSS
 - **Backend**: Astro API Routes (Node.js)
+- **Authentication**: Clerk (@clerk/astro)
 - **AI**:
   - Anthropic Claude SDK (@anthropic-ai/sdk)
   - OpenAI SDK (openai)
 - **Storage**: File-based JSON conversation persistence (separate storage for each AI provider)
 
 ### Key Features
-1. **Dual AI Providers**: Both Claude and ChatGPT integrations in a single app
-2. **Real-time Streaming**: Server-Sent Events (SSE) for streaming responses from both providers
-3. **Multimodal Support**: Image upload and vision analysis for both AI models
-4. **Conversation Management**: Persistent chat history with resume capability (separate storage per provider)
-5. **Context Management**: Following best practices for token management
-6. **Dual UI Themes**:
-   - **Claude Chat** (`/chat`): Clean, modern design with smooth animations
-   - **ChatGPT** (`/chatgpt`): Retro DOS terminal theme with CRT effects, scanlines, and command-line aesthetic
-7. **Responsive Design**: Works seamlessly on desktop and mobile devices
+1. **User Authentication**: Complete sign-up/sign-in flow powered by Clerk with protected routes
+2. **Dual AI Providers**: Both Claude and ChatGPT integrations in a single app
+3. **Real-time Streaming**: Server-Sent Events (SSE) for streaming responses from both providers
+4. **Multimodal Support**: Image upload and vision analysis for both AI models
+5. **Conversation Management**: Persistent chat history with resume capability (separate storage per provider)
+6. **Context Management**: Following best practices for token management
+7. **Dual UI Themes**:
+   - **Claude Chat** (`/chat`): Clean, modern design with smooth animations and account avatar
+   - **ChatGPT** (`/chatgpt`): Retro DOS terminal theme with CRT effects, scanlines, command-line aesthetic, and DOS-styled user menu
+8. **Responsive Design**: Works seamlessly on desktop and mobile devices
 
 ## Project Structure
 
 ```
 src/
 ├── components/
+│   ├── UserMenu.tsx      # Account avatar with login/logout (modern & DOS themes)
 │   ├── chat/             # Claude chat components (modern UI)
 │   │   ├── Chat.tsx      # Main chat orchestrator with streaming
 │   │   ├── ChatMessage.tsx   # Individual message display
@@ -46,23 +49,29 @@ src/
 │   └── gpt-storage.ts    # ChatGPT conversation persistence
 ├── pages/
 │   ├── api/
-│   │   ├── chat/         # Claude API routes
+│   │   ├── chat/         # Claude API routes (all protected with Clerk auth)
 │   │   │   ├── send.ts   # POST - Send message with streaming
 │   │   │   ├── conversations.ts  # GET - List conversations
 │   │   │   ├── conversations/[id].ts  # GET/DELETE - Manage conversation
 │   │   │   └── models.ts # GET - List available models
-│   │   └── gpt/          # ChatGPT API routes
+│   │   └── gpt/          # ChatGPT API routes (all protected with Clerk auth)
 │   │       ├── send.ts   # POST - Send message with streaming
 │   │       ├── conversations.ts  # GET - List conversations
 │   │       ├── conversations/[id].ts  # GET/DELETE - Manage conversation
 │   │       └── models.ts # GET - List available models
-│   ├── chat.astro        # Claude chat page (modern UI)
-│   └── chatgpt.astro     # ChatGPT page (DOS terminal UI)
+│   ├── sign-in.astro     # Clerk sign-in page
+│   ├── sign-up.astro     # Clerk sign-up page with custom styling
+│   ├── dashboard/        # Protected dashboard pages
+│   │   └── index.astro   # User dashboard with profile info
+│   ├── chat.astro        # Claude chat page (protected, modern UI)
+│   └── chatgpt.astro     # ChatGPT page (protected, DOS terminal UI)
 └── types/
     └── chat.ts           # TypeScript type definitions
 ```
 
 ## API Endpoints
+
+**Note**: All API endpoints require authentication via Clerk. Unauthenticated requests will receive a 401 Unauthorized response.
 
 ### Claude Endpoints (`/api/chat/*`)
 
@@ -104,20 +113,59 @@ Delete a ChatGPT conversation permanently.
 #### GET /api/gpt/models
 List available OpenAI models.
 
+## Authentication
+
+The application uses [Clerk](https://clerk.com) for user authentication, providing a complete sign-up/sign-in flow with minimal setup.
+
+### Features
+- **Sign-Up/Sign-In Pages**: Pre-built, customizable authentication pages
+- **Protected Routes**: Chat pages and API endpoints require authentication
+- **User Management**: Built-in user profile management via Clerk dashboard
+- **Account Avatar**: UserMenu component with account dropdown and logout functionality
+- **Multiple Auth Methods**: Email/password, social logins (Google, GitHub, etc.)
+- **Session Management**: Automatic session handling and token refresh
+
+### Implementation Details
+- **Protected Pages**: `/chat` and `/chatgpt` redirect to sign-in if user is not authenticated
+- **Protected API Routes**: All `/api/chat/*` and `/api/gpt/*` endpoints validate Clerk sessions
+- **UserMenu Component**:
+  - Modern theme for Claude chat with clean UI
+  - DOS theme for ChatGPT with retro terminal styling
+  - Dashboard link and user avatar with dropdown menu
+  - Sign-out functionality
+
+### Setup
+1. Create a free Clerk account at https://dashboard.clerk.com
+2. Create a new application in Clerk dashboard
+3. Copy your API keys to `.env` (see Environment Variables section below)
+4. Configure allowed redirect URLs in Clerk dashboard:
+   - Sign-in URL: `http://localhost:4321/sign-in` (dev) or `https://yourdomain.com/sign-in` (prod)
+   - Sign-up URL: `http://localhost:4321/sign-up` (dev) or `https://yourdomain.com/sign-up` (prod)
+   - After sign-in URL: `http://localhost:4321/dashboard` (dev) or `https://yourdomain.com/dashboard` (prod)
+
 ## Configuration
 
 ### Environment Variables
 ```bash
-# Claude API (for /chat page)
-ANTHROPIC_API_KEY=sk-ant-...  # Required: Your Anthropic API key
+# Authentication (Required)
+# Get from: https://dashboard.clerk.com → API Keys
+PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...  # Clerk publishable key
+CLERK_SECRET_KEY=sk_test_...              # Clerk secret key
 
-# OpenAI API (for /chatgpt page)
-OPENAI_API_KEY=sk-...  # Required: Your OpenAI API key
+# Optional Clerk Configuration
+PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# Claude API (Required for /chat page)
+# Get from: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=sk-ant-...
+
+# OpenAI API (Required for /chatgpt page)
+# Get from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-...
 ```
-
-Get your API keys from:
-- Claude: https://console.anthropic.com/settings/keys
-- OpenAI: https://platform.openai.com/api-keys
 
 ### Default Settings
 
@@ -170,13 +218,17 @@ Get your API keys from:
 ```bash
 npm install
 cp .env.example .env
-# Add your ANTHROPIC_API_KEY and OPENAI_API_KEY to .env
+# Add your Clerk keys, ANTHROPIC_API_KEY, and OPENAI_API_KEY to .env
 npm run dev
 ```
 
 Visit:
-- Claude Chat: http://localhost:4321/chat
-- ChatGPT DOS Terminal: http://localhost:4321/chatgpt
+- Home: http://localhost:4321/ (with sign-in/sign-up links)
+- Sign Up: http://localhost:4321/sign-up
+- Sign In: http://localhost:4321/sign-in
+- Dashboard: http://localhost:4321/dashboard (requires authentication)
+- Claude Chat: http://localhost:4321/chat (requires authentication)
+- ChatGPT DOS Terminal: http://localhost:4321/chatgpt (requires authentication)
 
 ### Building
 ```bash
@@ -221,6 +273,7 @@ The ChatGPT page features a unique retro DOS command-line interface:
 - Image upload with DOS-style preview
 
 ## Future Enhancements
+- Per-user conversation storage (currently shared across all users)
 - Agent capabilities with tool use
 - Custom system prompts
 - Model selection in UI
@@ -228,9 +281,13 @@ The ChatGPT page features a unique retro DOS command-line interface:
 - Search conversation history
 - Token usage tracking and display
 - Prompt caching for long conversations
-- Multi-user support with authentication
 
 ## References
+
+### Authentication
+- [Clerk Documentation](https://clerk.com/docs)
+- [Clerk Astro Integration](https://clerk.com/docs/references/astro/overview)
+- [Clerk Dashboard](https://dashboard.clerk.com)
 
 ### Claude
 - [Anthropic Claude SDK](https://github.com/anthropics/anthropic-sdk-typescript)

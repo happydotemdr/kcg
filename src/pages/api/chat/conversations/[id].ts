@@ -9,7 +9,16 @@
 import type { APIRoute } from 'astro';
 import { getConversation, deleteConversation } from '../../../../lib/storage';
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
+  // Check authentication
+  const { userId } = (locals as any).auth();
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { id } = params;
 
   if (!id) {
@@ -44,7 +53,16 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
+  // Check authentication
+  const { userId } = (locals as any).auth();
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { id } = params;
 
   if (!id) {

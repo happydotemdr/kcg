@@ -6,8 +6,17 @@
 import type { APIRoute } from 'astro';
 import { listConversations } from '../../../lib/storage';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ locals }) => {
   try {
+    // Check authentication
+    const { userId } = (locals as any).auth();
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const conversations = await listConversations();
 
     return new Response(JSON.stringify(conversations), {

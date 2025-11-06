@@ -14,8 +14,17 @@ import {
 } from '../../../lib/gpt-storage';
 import type { Message, ChatRequest } from '../../../types/chat';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // Check authentication
+    const { userId } = (locals as any).auth();
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const body: ChatRequest = await request.json();
     const { conversationId, message, images, model, systemPrompt } = body;
 

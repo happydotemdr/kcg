@@ -68,15 +68,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         </div>
 
         <div class="nav-auth">
-          <SignedOut client:load>
-            <SignInButton client:load mode="modal">
+          <SignedOut>
+            <SignInButton mode="modal">
               <button class="sign-in-button">Sign In</button>
             </SignInButton>
           </SignedOut>
 
-          <SignedIn client:load>
+          <SignedIn>
             <a href="/dashboard" class="nav-link dashboard-link">Dashboard</a>
-            <UserButton client:load />
+            <UserButton />
           </SignedIn>
         </div>
       </div>
