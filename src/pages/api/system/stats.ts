@@ -83,7 +83,9 @@ async function getLatestConversationTime(dirPath: string): Promise<number | null
 
 export const GET: APIRoute = async ({ locals }) => {
   // Check authentication
-  const { userId } = (locals as any).auth();
+  const auth = locals.auth;
+  const userId = auth?.userId || null;
+
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,

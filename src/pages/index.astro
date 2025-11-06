@@ -4,14 +4,8 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 export const prerender = false;
 
 // Check authentication status (optional redirect for logged-in users)
-let userId: string | null = null;
-try {
-  const auth = (Astro.locals as any).auth();
-  userId = auth?.userId || null;
-} catch (error) {
-  // Auth check failed, user is not authenticated
-  // This is fine for the home page
-}
+const auth = Astro.locals.auth;
+const userId = auth?.userId || null;
 
 // Redirect to dashboard if authenticated
 if (userId) {

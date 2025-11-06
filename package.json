@@ -20,6 +20,7 @@
     "@astrojs/tailwind": "^5.1.2",
     "@clerk/astro": "^1.4.5",
     "@clerk/backend": "^1.18.3",
+    "@nanostores/react": "^1.0.0",
     "@types/pg": "^8.15.6",
     "astro": "^4.16.18",
     "dotenv": "^17.2.3",
