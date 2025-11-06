@@ -62,9 +62,17 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         </a>
 
         <div class="nav-links">
-          <a href="/" class="nav-link">Home</a>
-          <a href="/about" class="nav-link">About</a>
-          <a href="/blog" class="nav-link">Blog</a>
+          <SignedOut>
+            <a href="/" class="nav-link">Home</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/blog" class="nav-link">Blog</a>
+          </SignedOut>
+
+          <SignedIn>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/chat" class="nav-link">Claude Chat</a>
+            <a href="/chatgpt" class="nav-link">ChatGPT</a>
+          </SignedIn>
         </div>
 
         <div class="nav-auth">
@@ -75,7 +83,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           </SignedOut>
 
           <SignedIn>
-            <a href="/dashboard" class="nav-link dashboard-link">Dashboard</a>
             <UserButton />
           </SignedIn>
         </div>
