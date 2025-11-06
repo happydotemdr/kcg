@@ -9,7 +9,7 @@ import type { Message } from '../types/chat';
 
 // Initialize the OpenAI client
 const client = new OpenAI({
-  apiKey: import.meta.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
