@@ -6,6 +6,8 @@
 import type { APIRoute } from 'astro';
 import { getConversation, deleteConversation } from '../../../../lib/gpt-storage';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
     // Check authentication

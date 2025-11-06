@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { Webhook } from 'svix';
 
+export const prerender = false;
+
 /**
  * Clerk webhook handler for processing authentication events
  *

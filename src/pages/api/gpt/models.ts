@@ -6,6 +6,8 @@
 import type { APIRoute } from 'astro';
 import { AVAILABLE_MODELS } from '../../../lib/openai';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ locals }) => {
   // Check authentication
   let userId: string | null = null;

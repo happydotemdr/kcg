@@ -9,6 +9,8 @@
 import type { APIRoute } from 'astro';
 import { getConversation, deleteConversation } from '../../../../lib/storage';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ params, locals }) => {
   // Check authentication
   const { userId } = (locals as any).auth();

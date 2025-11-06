@@ -14,6 +14,8 @@ import {
 } from '../../../lib/gpt-storage';
 import type { Message, ChatRequest } from '../../../types/chat';
 
+export const prerender = false;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Check authentication

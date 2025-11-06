@@ -3,7 +3,7 @@ import GoogleAnalytics from '@components/analytics/GoogleAnalytics.astro';
 import GoogleAds from '@components/analytics/GoogleAds.astro';
 import MetaPixel from '@components/analytics/MetaPixel.astro';
 import TwitterPixel from '@components/analytics/TwitterPixel.astro';
-import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/astro/react';
+import NavigationAuth from '@components/NavigationAuth';
 
 interface Props {
   title?: string;
@@ -62,29 +62,11 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         </a>
 
         <div class="nav-links">
-          <SignedOut>
-            <a href="/" class="nav-link">Home</a>
-            <a href="/about" class="nav-link">About</a>
-            <a href="/blog" class="nav-link">Blog</a>
-          </SignedOut>
-
-          <SignedIn>
-            <a href="/dashboard" class="nav-link">Dashboard</a>
-            <a href="/chat" class="nav-link">Claude Chat</a>
-            <a href="/chatgpt" class="nav-link">ChatGPT</a>
-          </SignedIn>
+          <NavigationAuth isInNav={true} client:only="react" />
         </div>
 
         <div class="nav-auth">
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button class="sign-in-button">Sign In</button>
-            </SignInButton>
-          </SignedOut>
-
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
+          <NavigationAuth client:only="react" />
         </div>
       </div>
     </nav>

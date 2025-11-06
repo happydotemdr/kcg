@@ -6,6 +6,8 @@
 import type { APIRoute } from 'astro';
 import { AVAILABLE_MODELS } from '../../../lib/claude';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ locals }) => {
   // Check authentication
   const { userId } = (locals as any).auth();

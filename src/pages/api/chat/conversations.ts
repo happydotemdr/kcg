@@ -6,6 +6,8 @@
 import type { APIRoute } from 'astro';
 import { listConversations } from '../../../lib/storage';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ locals }) => {
   try {
     // Check authentication
