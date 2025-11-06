@@ -1,7 +1,7 @@
 import type { AstroGlobal } from 'astro';
 
 /**
- * Auth state returned from Astro.locals.auth()
+ * Auth state returned from Clerk Astro
  */
 interface AuthState {
   userId: string | null;
@@ -16,21 +16,22 @@ interface AuthState {
 }
 
 /**
- * Gets the current authentication state from Astro.locals.auth()
+ * Gets the current authentication state from Clerk
  *
  * @param Astro - The Astro global object
  * @returns The current auth state containing userId and user data
  *
  * @example
  * ```ts
- * const auth = await getCurrentUser(Astro);
+ * const auth = getCurrentUser(Astro);
  * if (auth.userId) {
  *   console.log('User is authenticated:', auth.userId);
  * }
  * ```
  */
-export async function getCurrentUser(Astro: AstroGlobal): Promise<AuthState> {
-  return await Astro.locals.auth();
+export function getCurrentUser(Astro: AstroGlobal): AuthState {
+  const locals = Astro.locals as any;
+  return locals.auth();
 }
 
 /**
@@ -46,21 +47,21 @@ export async function getCurrentUser(Astro: AstroGlobal): Promise<AuthState> {
  * @example
  * ```ts
  * // In an Astro page or API endpoint
- * const result = await requireAuth(Astro);
+ * const result = requireAuth(Astro);
  * if (result instanceof Response) return result;
  *
  * const userId = result;
  * // User is authenticated, proceed with logic
  *
  * // With custom redirect
- * const userId = await requireAuth(Astro, '/login');
+ * const userId = requireAuth(Astro, '/login');
  * ```
  */
-export async function requireAuth(
+export function requireAuth(
   Astro: AstroGlobal,
   redirectTo: string = '/sign-in'
-): Promise<string | Response> {
-  const auth = await getCurrentUser(Astro);
+): string | Response {
+  const auth = getCurrentUser(Astro);
 
   if (!auth.userId) {
     return Astro.redirect(redirectTo);
@@ -82,15 +83,15 @@ export async function requireAuth(
  * @example
  * ```ts
  * // In an Astro page or API endpoint
- * const result = await requireAdmin(Astro);
+ * const result = requireAdmin(Astro);
  * if (result instanceof Response) return result;
  *
  * const userId = result;
  * // User is authenticated and is an admin, proceed with admin logic
  * ```
  */
-export async function requireAdmin(Astro: AstroGlobal): Promise<string | Response> {
-  const auth = await getCurrentUser(Astro);
+export function requireAdmin(Astro: AstroGlobal): string | Response {
+  const auth = getCurrentUser(Astro);
 
   if (!auth.userId || !auth.user) {
     return new Response(

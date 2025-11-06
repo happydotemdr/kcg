@@ -4,7 +4,7 @@ import { UserProfile } from '@clerk/astro/components';
 
 export const prerender = false;
 
-const { userId } = Astro.locals.auth();
+const { userId } = (Astro.locals as any).auth();
 
 if (!userId) {
   return Astro.redirect('/sign-in');

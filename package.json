@@ -20,6 +20,7 @@
     "@astrojs/tailwind": "^5.1.2",
     "@anthropic-ai/sdk": "^0.32.1",
     "@clerk/astro": "^1.4.5",
+    "@clerk/backend": "^1.18.3",
     "@types/pg": "^8.15.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

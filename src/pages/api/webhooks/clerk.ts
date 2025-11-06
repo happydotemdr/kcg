@@ -83,11 +83,11 @@ export const POST: APIRoute = async ({ request }) => {
     switch (eventType) {
       case 'user.created':
         console.log('User created event received:', {
-          userId: event.data.id,
-          email: event.data.email_addresses?.[0]?.email_address,
-          firstName: event.data.first_name,
-          lastName: event.data.last_name,
-          createdAt: new Date(event.data.created_at).toISOString(),
+          userId: (event.data as any).id,
+          email: (event.data as any).email_addresses?.[0]?.email_address,
+          firstName: (event.data as any).first_name,
+          lastName: (event.data as any).last_name,
+          createdAt: new Date((event.data as any).created_at).toISOString(),
         });
         // Add your user creation logic here
         // Examples:
@@ -99,11 +99,11 @@ export const POST: APIRoute = async ({ request }) => {
 
       case 'user.updated':
         console.log('User updated event received:', {
-          userId: event.data.id,
-          email: event.data.email_addresses?.[0]?.email_address,
-          firstName: event.data.first_name,
-          lastName: event.data.last_name,
-          updatedAt: new Date(event.data.updated_at).toISOString(),
+          userId: (event.data as any).id,
+          email: (event.data as any).email_addresses?.[0]?.email_address,
+          firstName: (event.data as any).first_name,
+          lastName: (event.data as any).last_name,
+          updatedAt: (event.data as any).updated_at ? new Date((event.data as any).updated_at).toISOString() : undefined,
         });
         // Add your user update logic here
         // Examples:

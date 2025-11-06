@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { SignUp } from '@clerk/astro/components';
+import { SignUp as ClerkSignUp } from '@clerk/astro/components';
 
 export const prerender = false;
 ---
@@ -8,7 +8,7 @@ export const prerender = false;
 <BaseLayout title="Sign Up - Keep Choosing Good">
   <main class="auth-container">
     <div class="auth-wrapper">
-      <SignUp
+      <ClerkSignUp
         client:load
         appearance={{
           elements: {

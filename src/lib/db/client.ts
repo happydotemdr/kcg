@@ -3,7 +3,8 @@
  * Connection pooling and query execution
  */
 
-import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+import { Pool } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { getDatabaseConfig } from './config';
 
 let pool: Pool | null = null;

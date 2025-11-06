@@ -1,5 +1,8 @@
-import { clerkClient } from '@clerk/astro/server';
-import type { User } from '@clerk/astro/server';
+import { createClerkClient } from '@clerk/backend';
+import type { User } from '@clerk/backend';
+
+// Initialize Clerk backend client
+const clerk = createClerkClient({ secretKey: import.meta.env.CLERK_SECRET_KEY || '' });
 
 /**
  * Fetches complete user details from Clerk
@@ -14,7 +17,7 @@ import type { User } from '@clerk/astro/server';
  */
 export async function getFullUser(userId: string): Promise<User | null> {
   try {
-    const user = await clerkClient.users.getUser(userId);
+    const user = await clerk.users.getUser(userId);
     return user;
   } catch (error) {
     console.error(`Error fetching user ${userId}:`, error);
@@ -39,7 +42,7 @@ export async function updateUserMetadata(
   metadata: Record<string, any>
 ): Promise<User | null> {
   try {
-    const user = await clerkClient.users.updateUser(userId, {
+    const user = await clerk.users.updateUser(userId, {
       publicMetadata: metadata,
     });
     return user;

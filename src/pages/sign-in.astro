@@ -1,13 +1,13 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { SignIn } from '@clerk/astro/components';
+import { SignIn as ClerkSignIn } from '@clerk/astro/components';
 
 export const prerender = false;
 ---
 
 <BaseLayout title="Sign In - Keep Choosing Good">
   <main class="sign-in-container">
-    <SignIn
+    <ClerkSignIn
       client:load
       appearance={{
         variables: {
