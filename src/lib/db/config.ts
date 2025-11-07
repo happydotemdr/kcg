@@ -27,12 +27,13 @@ export function getDatabaseConfig(): DatabaseConfig {
   if (databaseUrl) {
     // Parse connection string format: postgresql://user:password@host:port/database
     const url = new URL(databaseUrl);
+    const password = url.password;
     return {
       host: url.hostname,
       port: parseInt(url.port) || 5432,
       database: url.pathname.slice(1), // Remove leading slash
       user: url.username,
-      password: url.password,
+      password: password !== '' ? password : undefined as any,
       ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
       max: parseInt(process.env.DATABASE_POOL_MAX || '20'),
       idleTimeoutMillis: 30000,
@@ -41,12 +42,13 @@ export function getDatabaseConfig(): DatabaseConfig {
   }
 
   // Fallback to individual environment variables
+  const password = process.env.DATABASE_PASSWORD;
   return {
     host: process.env.DATABASE_HOST || 'localhost',
     port: parseInt(process.env.DATABASE_PORT || '5432'),
     database: process.env.DATABASE_NAME || 'kcg_db',
     user: process.env.DATABASE_USER || 'postgres',
-    password: process.env.DATABASE_PASSWORD || '',
+    password: password !== undefined && password !== '' ? password : undefined as any,
     ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
     max: parseInt(process.env.DATABASE_POOL_MAX || '20'),
     idleTimeoutMillis: 30000,
