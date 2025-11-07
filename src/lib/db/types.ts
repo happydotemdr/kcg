@@ -78,3 +78,21 @@ export type CreateClerkWebhookEvent = Omit<ClerkWebhookEvent, 'id' | 'created_at
   id?: string;
   created_at?: Date;
 };
+
+export interface GoogleOAuthToken {
+  id: string;
+  user_id: string;
+  access_token: string;
+  refresh_token: string | null;
+  token_type: string;
+  expiry_date: number | null; // Unix timestamp in milliseconds
+  scope: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateGoogleOAuthToken = Omit<GoogleOAuthToken, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};

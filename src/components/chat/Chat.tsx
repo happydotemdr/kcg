@@ -17,9 +17,57 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [toolInUse, setToolInUse] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Check calendar connection status on mount
+  useEffect(() => {
+    checkCalendarStatus();
+
+    // Check for OAuth callback success/error
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendar_connected') === 'true') {
+      setCalendarConnected(true);
+      // Remove query params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('calendar_error')) {
+      const errorType = params.get('calendar_error');
+      setError(`Calendar connection failed: ${errorType}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const checkCalendarStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/google/status');
+      if (response.ok) {
+        const data = await response.json();
+        setCalendarConnected(data.connected);
+      }
+    } catch (err) {
+      console.error('Failed to check calendar status:', err);
+    }
+  };
+
+  const handleConnectCalendar = () => {
+    window.location.href = '/api/auth/google/connect';
+  };
+
+  const handleDisconnectCalendar = async () => {
+    try {
+      const response = await fetch('/api/auth/google/disconnect', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        setCalendarConnected(false);
+      }
+    } catch (err) {
+      console.error('Failed to disconnect calendar:', err);
+    }
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -146,6 +194,10 @@ export default function Chat() {
             if (data.type === 'content_block_delta' && data.delta?.text) {
               accumulatedText += data.delta.text;
               setStreamingText(accumulatedText);
+              setToolInUse(null); // Clear tool indicator when receiving text
+            } else if (data.type === 'tool_use') {
+              // Tool is being used
+              setToolInUse(data.tool_name);
             } else if (data.type === 'message_stop') {
               // Stream complete - add assistant message
               const assistantMessage: Message = {
@@ -157,6 +209,7 @@ export default function Chat() {
 
               setMessages((prev) => [...prev, assistantMessage]);
               setStreamingText('');
+              setToolInUse(null);
 
               // Update conversation ID if this was a new conversation
               if (data.conversationId && !conversation) {
@@ -214,7 +267,36 @@ export default function Chat() {
               </p>
             )}
           </div>
-          <UserMenu theme="modern" />
+          <div className="flex items-center gap-4">
+            {/* Calendar Connection Button */}
+            {calendarConnected ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-green-600 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Calendar Connected
+                </span>
+                <button
+                  onClick={handleDisconnectCalendar}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnectCalendar}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Connect Calendar
+              </button>
+            )}
+            <UserMenu theme="modern" />
+          </div>
         </div>
 
         {/* Messages Area */}
@@ -272,11 +354,23 @@ export default function Chat() {
               </div>
               <div className="flex-1">
                 <div className="font-medium text-sm text-gray-700 mb-2">Claude</div>
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
+                {toolInUse ? (
+                  <div className="text-sm text-blue-600 flex items-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>
+                      {toolInUse === 'get_calendar_events' ? 'Checking your calendar...' : `Using ${toolInUse}...`}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                )}
               </div>
             </div>
           )}
