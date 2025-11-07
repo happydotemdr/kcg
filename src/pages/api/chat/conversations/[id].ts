@@ -13,8 +13,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params, locals }) => {
   // Check authentication
-  const auth = locals.auth;
-  const userId = auth?.userId || null;
+  const { userId } = locals.auth();
 
   if (!userId) {
     return new Response(
@@ -67,8 +66,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   // Check authentication
-  const auth = locals.auth;
-  const userId = auth?.userId || null;
+  const { userId } = locals.auth();
 
   if (!userId) {
     return new Response(

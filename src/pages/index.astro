@@ -4,8 +4,7 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 export const prerender = false;
 
 // Check authentication status (optional redirect for logged-in users)
-const auth = Astro.locals.auth;
-const userId = auth?.userId || null;
+const { userId } = Astro.locals.auth();
 
 // Redirect to dashboard if authenticated
 if (userId) {
