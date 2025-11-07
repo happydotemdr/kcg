@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import DashboardHeader from '@components/DashboardHeader';
+import { findUserByClerkId } from '@lib/db/repositories/users';
 
 export const prerender = false;
 
@@ -14,9 +15,12 @@ if (!userId) {
   return Astro.redirect('/sign-in');
 }
 
-// Extract user information if available
-const firstName = 'User'; // User info would come from Clerk's user store
-const email = ''; // User info would come from Clerk's user store
+// Fetch user data from database
+const dbUser = await findUserByClerkId(userId);
+
+// Extract user information from database or use fallbacks
+const firstName = dbUser?.first_name || 'User';
+const email = dbUser?.email || '';
 ---
 
 <BaseLayout title="Dashboard - Keep Choosing Good" description="Your personal dashboard">

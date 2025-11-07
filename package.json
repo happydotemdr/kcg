@@ -10,7 +10,8 @@
     "astro": "astro",
     "db:test": "tsx scripts/db-test.ts",
     "db:init": "tsx scripts/db-init.ts",
-    "db:seed": "tsx scripts/db-seed.ts"
+    "db:seed": "tsx scripts/db-seed.ts",
+    "test:webhook": "tsx scripts/test-webhook.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

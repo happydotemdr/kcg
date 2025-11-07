@@ -4,9 +4,14 @@
  */
 
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { query, transaction } from './client';
 import type { PoolClient } from 'pg';
+
+// ES Module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Migration tracking table

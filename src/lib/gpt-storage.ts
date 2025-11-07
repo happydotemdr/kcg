@@ -37,6 +37,7 @@ function generateTitle(firstMessage: string): string {
  */
 export async function createConversation(
   firstMessage: Message,
+  userId: string,
   model: string = 'gpt-4o',
   systemPrompt?: string
 ): Promise<Conversation> {
@@ -53,6 +54,7 @@ export async function createConversation(
 
   const conversation: Conversation = {
     id,
+    userId,
     title: generateTitle(firstText || 'New conversation'),
     messages: [firstMessage],
     createdAt: now,
@@ -103,8 +105,9 @@ export async function updateConversation(
 
 /**
  * List all conversations, sorted by most recent
+ * @param userId - Optional user ID to filter conversations by owner
  */
-export async function listConversations(): Promise<ConversationListItem[]> {
+export async function listConversations(userId?: string): Promise<ConversationListItem[]> {
   await ensureDataDir();
 
   try {
@@ -117,6 +120,11 @@ export async function listConversations(): Promise<ConversationListItem[]> {
       try {
         const data = await fs.readFile(path.join(DATA_DIR, file), 'utf-8');
         const conv: Conversation = JSON.parse(data);
+
+        // Filter by userId if provided
+        if (userId && conv.userId !== userId) {
+          continue; // Skip conversations not owned by this user
+        }
 
         // Get last message text for preview
         const lastMsg = conv.messages[conv.messages.length - 1];

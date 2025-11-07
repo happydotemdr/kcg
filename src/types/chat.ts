@@ -30,6 +30,7 @@ export interface Message {
 
 export interface Conversation {
   id: string;
+  userId: string; // Clerk user ID who owns this conversation
   title: string;
   messages: Message[];
   createdAt: number;

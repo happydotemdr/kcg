@@ -39,6 +39,14 @@ export const GET: APIRoute = async ({ params, locals }) => {
       );
     }
 
+    // Verify user owns this conversation (backward compatible - allow if userId is undefined)
+    if (conversation.userId && conversation.userId !== userId) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: You do not have access to this conversation' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(JSON.stringify(conversation), {
       status: 200,
       headers: {
@@ -75,6 +83,24 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       return new Response(
         JSON.stringify({ error: 'Conversation ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user owns this conversation before deletion
+    const conversation = await getConversation(id);
+
+    if (!conversation) {
+      return new Response(
+        JSON.stringify({ error: 'Conversation not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify ownership (backward compatible - allow if userId is undefined)
+    if (conversation.userId && conversation.userId !== userId) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: You do not have permission to delete this conversation' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
