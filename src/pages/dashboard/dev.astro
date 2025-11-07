@@ -7,8 +7,7 @@ export const prerender = false;
 
 // Get authentication details from Clerk
 // Note: This page is protected by middleware, so user should be authenticated
-const auth = Astro.locals.auth;
-const userId = auth?.userId || null;
+const { userId } = Astro.locals.auth();
 
 // Redirect to sign-in if not authenticated (fallback check)
 if (!userId) {

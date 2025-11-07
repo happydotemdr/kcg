@@ -6,13 +6,26 @@ A modern AI chat experience built with Astro and React, featuring both Claude (A
 ## Architecture
 
 ### Tech Stack
-- **Frontend**: Astro + React + Tailwind CSS
+- **Frontend**: Astro v5 + React + Tailwind CSS
 - **Backend**: Astro API Routes (Node.js)
-- **Authentication**: Clerk (@clerk/astro)
+- **Authentication**: Clerk (@clerk/astro v2)
 - **AI**:
   - Anthropic Claude SDK (@anthropic-ai/sdk)
   - OpenAI SDK (openai)
 - **Storage**: File-based JSON conversation persistence (separate storage for each AI provider)
+
+### Recent Upgrades (November 2025)
+This project has been upgraded to the latest versions:
+- **Astro v4 → v5.15.4**: Migrated to Astro v5 with updated configuration
+- **@clerk/astro v1 → v2.14.5**: Updated authentication with new API
+- **@astrojs/node v8 → v9.5.0**: Latest Node adapter
+- **@astrojs/react v3 → v4.4.2**: React integration updates
+- **@astrojs/tailwind v5 → v6.0.2**: Tailwind CSS updates
+
+#### Breaking Changes Addressed
+1. **Output Mode**: Changed from `output: 'hybrid'` to `output: 'static'` (Astro v5 merges hybrid and static modes)
+2. **Clerk Authentication**: Updated from `locals.auth.userId` to `locals.auth()` function call pattern
+3. **Type Safety**: All TypeScript errors resolved with updated type definitions
 
 ### Key Features
 1. **User Authentication**: Complete sign-up/sign-in flow powered by Clerk with protected routes
