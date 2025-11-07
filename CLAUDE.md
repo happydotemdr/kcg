@@ -264,6 +264,51 @@ npm run build
 npm run preview
 ```
 
+## Feature Planning & Development Workflow
+
+This project includes a comprehensive **Feature Breakdown System** for planning and implementing new features in a structured, repeatable way.
+
+### What It Does
+
+The Feature Breakdown System is a Claude skill that:
+1. **Guides Discovery**: Asks 9 strategic questions to understand your feature idea
+2. **Analyzes Architecture**: Reviews the codebase to determine integration points
+3. **Creates Vertical Slices**: Breaks features into independently deliverable chunks
+4. **Generates Atomic Tasks**: Produces specific, testable tasks ready for implementation
+
+### Quick Start
+
+```
+You: "I want to plan a new feature using the feature breakdown skill"
+```
+
+Answer 9 questions about your feature, and the system will generate a detailed implementation plan with:
+- User stories and acceptance criteria
+- Architectural decisions and rationale
+- Vertical slices with dependencies clearly marked
+- Atomic tasks with validation steps
+- Testing strategy
+- Agent assignment recommendations
+- TodoWrite-ready task format
+
+### Documentation
+
+- **Full Guide**: [docs/FEATURE-BREAKDOWN-GUIDE.md](./docs/FEATURE-BREAKDOWN-GUIDE.md)
+- **Quick Reference**: [docs/FEATURE-BREAKDOWN-QUICK-REFERENCE.md](./docs/FEATURE-BREAKDOWN-QUICK-REFERENCE.md)
+- **Example Plan**: [docs/features/EXAMPLE-favorite-responses-implementation-plan.md](./docs/features/EXAMPLE-favorite-responses-implementation-plan.md)
+- **Skill File**: [.claude/skills/feature-breakdown.md](./.claude/skills/feature-breakdown.md)
+
+### When to Use
+
+- ✅ **Medium to Large Features**: Multiple components or API endpoints
+- ✅ **Complex Integrations**: Touching multiple systems
+- ✅ **New Architectural Patterns**: Establishing new conventions
+- ✅ **Team Collaboration**: Need clear, documented plan
+
+### Output Location
+
+Generated plans are saved to: `docs/features/[feature-name]-implementation-plan.md`
+
 ## Data Storage
 
 Conversations are stored as JSON files with separate directories per provider:
