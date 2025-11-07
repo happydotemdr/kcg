@@ -4,7 +4,20 @@
  * Populate database with sample data for testing
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+// Load environment variables with .env.local taking priority
+const envLocalPath = resolve(process.cwd(), '.env.local');
+const envPath = resolve(process.cwd(), '.env');
+
+if (existsSync(envLocalPath)) {
+  config({ path: envLocalPath, override: true });
+} else if (existsSync(envPath)) {
+  config({ path: envPath });
+}
+
 import { initializeDatabase, closeDatabase } from '../src/lib/db';
 import { createUser, countUsers } from '../src/lib/db/repositories/users';
 import { storeWebhookEvent } from '../src/lib/db/repositories/webhooks';

@@ -25,3 +25,9 @@ pnpm-debug.log*
 
 # misc
 *.log
+
+# database storage
+data/
+
+# backup files
+*_backup

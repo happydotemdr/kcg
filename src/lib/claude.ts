@@ -5,7 +5,9 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { Message as AnthropicMessage } from '@anthropic-ai/sdk/resources/messages';
+import type { MessageParam, Tool } from '@anthropic-ai/sdk/resources/messages';
 import type { Message } from '../types/chat';
+import { getUpcomingEvents, formatEventsForChat, isCalendarConnected } from './google-calendar';
 
 // Initialize the Anthropic client
 const client = new Anthropic({
@@ -21,7 +23,26 @@ export const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 /**
  * Default system prompt for a helpful AI assistant
  */
-export const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant created by Anthropic. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided.`;
+export const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant created by Anthropic. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided. You have access to tools that allow you to help users with their Google Calendar.`;
+
+/**
+ * Calendar tool definition for Claude
+ */
+export const CALENDAR_TOOL: Tool = {
+  name: 'get_calendar_events',
+  description: 'Retrieves the next 5 upcoming events from the user\'s Google Calendar. Use this when the user asks about their schedule, upcoming events, meetings, or appointments. Only works if the user has connected their Google Calendar.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      max_results: {
+        type: 'number',
+        description: 'Maximum number of events to retrieve (default: 5, max: 10)',
+        default: 5,
+      },
+    },
+    required: [],
+  },
+};
 
 /**
  * Convert our Message format to Anthropic's format
@@ -176,4 +197,162 @@ export function estimateTokens(messages: Message[]): number {
   }
 
   return Math.ceil(charCount / 4);
+}
+
+/**
+ * Execute a tool call
+ */
+async function executeTool(
+  toolName: string,
+  toolInput: any,
+  userId: string
+): Promise<{ success: boolean; result?: string; error?: string }> {
+  try {
+    if (toolName === 'get_calendar_events') {
+      // Check if calendar is connected
+      const connected = await isCalendarConnected(userId);
+      if (!connected) {
+        return {
+          success: false,
+          error: 'Google Calendar is not connected. Please connect your calendar first by clicking the "Connect Calendar" button.',
+        };
+      }
+
+      // Get max_results from input, default to 5, max 10
+      const maxResults = Math.min(toolInput.max_results || 5, 10);
+
+      // Fetch calendar events
+      const events = await getUpcomingEvents(userId, maxResults);
+      const formattedEvents = formatEventsForChat(events);
+
+      return {
+        success: true,
+        result: formattedEvents,
+      };
+    }
+
+    return {
+      success: false,
+      error: `Unknown tool: ${toolName}`,
+    };
+  } catch (error) {
+    console.error(`Error executing tool ${toolName}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
+ * Stream a chat completion with tool use support (Agent SDK pattern)
+ * Implements an agentic loop where Claude can call tools and process results
+ *
+ * @param messages - Conversation history
+ * @param userId - User ID for accessing user-specific resources (like calendar)
+ * @param onText - Callback for text chunks
+ * @param onToolUse - Callback when a tool is being used
+ * @param onComplete - Callback when stream completes
+ * @param onError - Callback for errors
+ * @param model - Model to use
+ * @param systemPrompt - System prompt for Claude
+ */
+export async function streamChatCompletionWithTools(
+  messages: Message[],
+  userId: string,
+  onText: (text: string) => void,
+  onToolUse: (toolName: string, toolInput: any) => void,
+  onComplete: (fullText: string) => void,
+  onError: (error: Error) => void,
+  model: string = DEFAULT_MODEL,
+  systemPrompt: string = DEFAULT_SYSTEM_PROMPT
+): Promise<void> {
+  try {
+    // Convert messages to Anthropic format
+    let anthropicMessages: MessageParam[] = messages.map(toAnthropicMessage);
+    let fullText = '';
+    const maxIterations = 5; // Prevent infinite loops
+    let iteration = 0;
+
+    // Agentic loop: continue until Claude stops using tools
+    while (iteration < maxIterations) {
+      iteration++;
+
+      // Create streaming request with tools
+      const stream = client.messages.stream({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: anthropicMessages,
+        tools: [CALENDAR_TOOL],
+      });
+
+      let currentResponse: any = null;
+      let toolUsed = false;
+
+      // Handle different event types
+      stream.on('text', (text: string) => {
+        fullText += text;
+        onText(text);
+      });
+
+      stream.on('error', (error) => {
+        onError(error);
+      });
+
+      // Wait for final message
+      currentResponse = await stream.finalMessage();
+
+      // Check if Claude used a tool
+      const toolUseBlocks = currentResponse.content.filter(
+        (block: any) => block.type === 'tool_use'
+      );
+
+      if (toolUseBlocks.length > 0) {
+        toolUsed = true;
+
+        // Process each tool use
+        for (const toolBlock of toolUseBlocks) {
+          const { id: toolUseId, name: toolName, input: toolInput } = toolBlock;
+
+          // Notify UI that tool is being used
+          onToolUse(toolName, toolInput);
+
+          // Execute the tool
+          const toolResult = await executeTool(toolName, toolInput, userId);
+
+          // Add assistant's response (with tool_use) to messages
+          anthropicMessages.push({
+            role: 'assistant',
+            content: currentResponse.content,
+          });
+
+          // Add tool result to messages
+          anthropicMessages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: toolUseId,
+                content: toolResult.success
+                  ? toolResult.result!
+                  : `Error: ${toolResult.error}`,
+              },
+            ],
+          });
+        }
+
+        // Continue the loop to get Claude's response to the tool results
+        continue;
+      }
+
+      // No tools used, we're done
+      break;
+    }
+
+    // Call completion handler
+    onComplete(fullText);
+  } catch (error) {
+    onError(error as Error);
+  }
 }
