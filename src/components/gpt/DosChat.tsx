@@ -17,6 +17,8 @@ export default function DosChat() {
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [toolInUse, setToolInUse] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -25,6 +27,34 @@ export default function DosChat() {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Check calendar connection status on mount
+  useEffect(() => {
+    const checkCalendarStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/google/status');
+        if (response.ok) {
+          const data = await response.json();
+          setCalendarConnected(data.connected);
+        }
+      } catch (err) {
+        console.error('Error checking calendar status:', err);
+      }
+    };
+
+    checkCalendarStatus();
+
+    // Check for OAuth callback success/error in URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendar') === 'connected') {
+      setCalendarConnected(true);
+      // Remove query param
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('calendar') === 'error') {
+      setError('Failed to connect calendar. Please try again.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   // Auto-scroll to bottom
@@ -69,6 +99,28 @@ export default function DosChat() {
     }
   };
 
+  // Handle calendar connection
+  const handleConnectCalendar = () => {
+    window.location.href = '/api/auth/google/connect';
+  };
+
+  // Handle calendar disconnection
+  const handleDisconnectCalendar = async () => {
+    try {
+      const response = await fetch('/api/auth/google/disconnect', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        setCalendarConnected(false);
+      } else {
+        setError('Failed to disconnect calendar');
+      }
+    } catch (err) {
+      setError('Failed to disconnect calendar');
+    }
+  };
+
   // Send message with streaming
   const handleSendMessage = async (
     message: string,
@@ -80,6 +132,7 @@ export default function DosChat() {
       setIsStreaming(true);
       setError(null);
       setStreamingText('');
+      setToolInUse(null);
 
       // Add user message to UI immediately
       const userMessageId = `temp-${Date.now()}`;
@@ -152,6 +205,9 @@ export default function DosChat() {
             if (data.type === 'content_block_delta' && data.delta?.text) {
               accumulatedText += data.delta.text;
               setStreamingText(accumulatedText);
+            } else if (data.type === 'tool_use') {
+              // Tool is being used
+              setToolInUse(data.tool_name);
             } else if (data.type === 'message_stop') {
               // Stream complete - add assistant message
               const assistantMessage: Message = {
@@ -163,6 +219,7 @@ export default function DosChat() {
 
               setMessages((prev) => [...prev, assistantMessage]);
               setStreamingText('');
+              setToolInUse(null);
 
               // Update conversation ID if this was a new conversation
               if (data.conversationId && !conversation) {
@@ -233,8 +290,36 @@ export default function DosChat() {
             </span>
             <span className="text-green-400">[{formatTime(currentTime)}]</span>
           </div>
-          <div className="text-green-400">
-            └───────────────────────────────────────────────────────────────┘
+          <div className="flex justify-between items-center">
+            <span className="text-green-400">
+              └───────────────────────────────────────────────────────────────┘
+            </span>
+            {/* Calendar Connection Status */}
+            <div className="flex items-center gap-2">
+              {calendarConnected ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-green-400 border border-green-500 px-2 py-0.5 hover:bg-green-900 hover:bg-opacity-20"
+                    disabled
+                  >
+                    [√] CALENDAR.SYS
+                  </button>
+                  <button
+                    onClick={handleDisconnectCalendar}
+                    className="text-xs text-yellow-400 hover:text-yellow-300 underline"
+                  >
+                    [UNLOAD]
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnectCalendar}
+                  className="text-xs text-yellow-400 border border-yellow-500 px-2 py-0.5 hover:bg-yellow-900 hover:bg-opacity-20"
+                >
+                  [LOAD CALENDAR.SYS]
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -295,8 +380,23 @@ export default function DosChat() {
             </div>
           )}
 
+          {/* Tool Use Indicator */}
+          {toolInUse && (
+            <div className="mb-4 border border-cyan-500 p-2 bg-cyan-900 bg-opacity-10">
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">
+                  [EXEC] {toolInUse === 'get_calendar_events' ? 'CALENDAR.SYS' : toolInUse}
+                </span>
+                <span className="text-cyan-400 animate-pulse">...</span>
+              </div>
+              <div className="ml-4 text-xs text-cyan-300 mt-1">
+                &gt; LOADING DATA FROM GOOGLE CALENDAR API
+              </div>
+            </div>
+          )}
+
           {/* Loading indicator */}
-          {isStreaming && !streamingText && (
+          {isStreaming && !streamingText && !toolInUse && (
             <div className="mb-4">
               <div className="mb-1">
                 <span className="text-yellow-400">&gt; CHATGPT:</span>
