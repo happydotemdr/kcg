@@ -23,7 +23,7 @@ This project has been upgraded to the latest versions:
 - **@astrojs/tailwind v5 → v6.0.2**: Tailwind CSS updates
 
 #### Breaking Changes Addressed
-1. **Output Mode**: Changed from `output: 'hybrid'` to `output: 'static'` (Astro v5 merges hybrid and static modes)
+1. **Output Mode**: Using `output: 'server'` for full server-side rendering (required for API routes with Node adapter)
 2. **Clerk Authentication**: Updated from `locals.auth.userId` to `locals.auth()` function call pattern
 3. **Type Safety**: All TypeScript errors resolved with updated type definitions
 
