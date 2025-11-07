@@ -24,7 +24,6 @@ import 'dotenv/config';
 import { Webhook } from 'svix';
 import { initializeDatabase, closeDatabase, query } from '../src/lib/db';
 import { findUserByClerkId } from '../src/lib/db/repositories/users';
-import { getWebhookById } from '../src/lib/db/repositories/webhooks';
 
 // Configuration
 const WEBHOOK_URL = process.env.WEBHOOK_TEST_URL || 'http://localhost:4321/api/webhooks/clerk';
@@ -71,15 +70,14 @@ function generateSvixHeaders(payload: string): Record<string, string> {
   try {
     const webhook = new Webhook(WEBHOOK_SECRET);
     const msgId = `msg_${Date.now()}`;
-    const timestamp = Math.floor(Date.now() / 1000);
+    const timestamp = new Date();
 
     // Create signature
-    const toSign = `${msgId}.${timestamp}.${payload}`;
     const signature = webhook.sign(msgId, timestamp, payload);
 
     return {
       'svix-id': msgId,
-      'svix-timestamp': timestamp.toString(),
+      'svix-timestamp': Math.floor(timestamp.getTime() / 1000).toString(),
       'svix-signature': signature,
     };
   } catch (error) {
