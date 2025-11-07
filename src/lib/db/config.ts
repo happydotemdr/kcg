@@ -3,6 +3,23 @@
  * PostgreSQL 17 connection settings
  */
 
+// Load environment variables from .env file
+// This is critical for Astro/Node adapter to read .env files
+import { config as loadEnv } from 'dotenv';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+// Load .env.local first (higher priority), then .env
+const envLocalPath = resolve(process.cwd(), '.env.local');
+const envPath = resolve(process.cwd(), '.env');
+
+if (existsSync(envLocalPath)) {
+  loadEnv({ path: envLocalPath, override: false });
+}
+if (existsSync(envPath)) {
+  loadEnv({ path: envPath, override: false });
+}
+
 export interface DatabaseConfig {
   host: string;
   port: number;
@@ -27,12 +44,12 @@ export function getDatabaseConfig(): DatabaseConfig {
   if (databaseUrl) {
     // Parse connection string format: postgresql://user:password@host:port/database
     const url = new URL(databaseUrl);
-    const password = url.password;
+    const password = url.password ? decodeURIComponent(url.password) : '';
     return {
       host: url.hostname,
       port: parseInt(url.port) || 5432,
       database: url.pathname.slice(1), // Remove leading slash
-      user: url.username,
+      user: decodeURIComponent(url.username),
       password: password !== '' ? password : undefined as any,
       ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
       max: parseInt(process.env.DATABASE_POOL_MAX || '20'),
@@ -43,7 +60,7 @@ export function getDatabaseConfig(): DatabaseConfig {
 
   // Fallback to individual environment variables
   const password = process.env.DATABASE_PASSWORD;
-  return {
+  const config = {
     host: process.env.DATABASE_HOST || 'localhost',
     port: parseInt(process.env.DATABASE_PORT || '5432'),
     database: process.env.DATABASE_NAME || 'kcg_db',
@@ -54,4 +71,6 @@ export function getDatabaseConfig(): DatabaseConfig {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   };
+
+  return config;
 }

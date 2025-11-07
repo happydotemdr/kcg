@@ -4,7 +4,20 @@
  * Run this script to initialize the database with the schema
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+// Load environment variables with .env.local taking priority
+const envLocalPath = resolve(process.cwd(), '.env.local');
+const envPath = resolve(process.cwd(), '.env');
+
+if (existsSync(envLocalPath)) {
+  config({ path: envLocalPath, override: true });
+} else if (existsSync(envPath)) {
+  config({ path: envPath });
+}
+
 import { initializeDatabase, testConnection, closeDatabase } from '../src/lib/db';
 import { runInitialMigration } from '../src/lib/db/migrations';
 
