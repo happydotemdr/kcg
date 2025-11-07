@@ -128,3 +128,29 @@ COMMENT ON COLUMN users.clerk_user_id IS 'Unique user ID from Clerk.com (format:
 COMMENT ON COLUMN users.metadata IS 'JSON object for storing additional user attributes';
 COMMENT ON COLUMN user_sessions.clerk_session_id IS 'Unique session ID from Clerk.com (format: sess_xxx)';
 COMMENT ON COLUMN clerk_webhook_events.event_id IS 'Unique event ID from Clerk.com (format: evt_xxx)';
+
+-- Google OAuth Tokens Table
+-- Store OAuth tokens for Google Calendar integration
+CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    token_type VARCHAR(50) DEFAULT 'Bearer',
+    expiry_date BIGINT, -- Unix timestamp in milliseconds
+    scope TEXT, -- Space-separated list of granted scopes
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id) -- One token per user
+);
+
+-- Create indexes for OAuth tokens
+CREATE INDEX IF NOT EXISTS idx_oauth_tokens_user_id ON google_oauth_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_tokens_expiry ON google_oauth_tokens(expiry_date);
+
+-- Create trigger for automatic timestamp updates
+CREATE TRIGGER update_oauth_tokens_updated_at BEFORE UPDATE ON google_oauth_tokens
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE google_oauth_tokens IS 'Stores OAuth2 tokens for Google Calendar API access';
+COMMENT ON COLUMN google_oauth_tokens.expiry_date IS 'Token expiration time in Unix milliseconds';

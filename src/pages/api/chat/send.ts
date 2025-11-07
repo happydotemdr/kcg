@@ -6,25 +6,35 @@
 
 import type { APIRoute } from 'astro';
 import { v4 as uuidv4 } from 'uuid';
-import { streamChatCompletion } from '../../../lib/claude';
+import { streamChatCompletionWithTools } from '../../../lib/claude';
 import {
   createConversation,
   getConversation,
   updateConversation,
 } from '../../../lib/storage';
 import type { Message, ChatRequest } from '../../../types/chat';
+import { findUserByClerkId } from '../../../lib/db/repositories/users';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Check authentication
-    const { userId } = locals.auth();
+    const { userId: clerkUserId } = locals.auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get database user ID for tool execution
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found in database' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -79,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
     } else {
-      conversation = await createConversation(userMessage, userId, model, systemPrompt);
+      conversation = await createConversation(userMessage, clerkUserId, model, systemPrompt);
     }
 
     // Add user message to conversation if it already existed
@@ -96,9 +106,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         let hasError = false;
 
         try {
-          // Stream the completion
-          await streamChatCompletion(
+          // Stream the completion with tool use support
+          await streamChatCompletionWithTools(
             conversation!.messages,
+            dbUser.id, // Database user ID for tool execution
             // On text chunk
             (text: string) => {
               if (hasError) return;
@@ -109,6 +120,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const data = JSON.stringify({
                 type: 'content_block_delta',
                 delta: { type: 'text_delta', text },
+              });
+
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            },
+            // On tool use
+            (toolName: string, toolInput: any) => {
+              if (hasError) return;
+
+              // Notify client that a tool is being used
+              const data = JSON.stringify({
+                type: 'tool_use',
+                tool_name: toolName,
+                tool_input: toolInput,
               });
 
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));

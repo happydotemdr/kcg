@@ -38,6 +38,12 @@ This project has been upgraded to the latest versions:
    - **Claude Chat** (`/chat`): Clean, modern design with smooth animations and account avatar
    - **ChatGPT** (`/chatgpt`): Retro DOS terminal theme with CRT effects, scanlines, command-line aesthetic, and DOS-styled user menu
 8. **Responsive Design**: Works seamlessly on desktop and mobile devices
+9. **Claude Agent SDK Integration**: Google Calendar tool using Anthropic's tool use feature
+   - Agentic workflow with automatic tool execution
+   - Read upcoming calendar events (next 5 events)
+   - OAuth2 authentication for secure access
+   - Real-time tool use indicators in chat UI
+   - Per-user token storage in PostgreSQL
 
 ## Project Structure
 
@@ -178,7 +184,16 @@ ANTHROPIC_API_KEY=sk-ant-...
 # OpenAI API (Required for /chatgpt page)
 # Get from: https://platform.openai.com/api-keys
 OPENAI_API_KEY=sk-...
+
+# Google Calendar Integration (Optional, for calendar tool)
+# Get from: https://console.cloud.google.com/apis/credentials
+# See CALENDAR_SETUP.md for detailed setup instructions
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:4321/api/auth/google/callback
 ```
+
+**Note**: For Google Calendar integration setup, see [`CALENDAR_SETUP.md`](./CALENDAR_SETUP.md) for complete instructions.
 
 ### Default Settings
 
