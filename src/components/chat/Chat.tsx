@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSidebar from './ChatSidebar';
-import UserMenu from '../UserMenu';
+import AppHeader from '../AppHeader';
 import type { Message, Conversation } from '../../types/chat';
 
 export default function Chat() {
@@ -244,60 +244,63 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <ChatSidebar
-        currentConversationId={conversation?.id}
-        onSelectConversation={handleSelectConversation}
-        onNewChat={handleNewChat}
-        onDeleteConversation={handleDeleteConversation}
-      />
+    <div className="flex h-screen bg-gray-100 flex-col">
+      {/* Unified Header */}
+      <AppHeader theme="modern" currentPage="chat" />
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-gray-800">
-              {conversation?.title || 'New Conversation'}
-            </h1>
-            {conversation && (
-              <p className="text-sm text-gray-500 mt-1">
-                Model: {conversation.model}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Calendar Connection Button */}
-            {calendarConnected ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-green-600 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Calendar Connected
-                </span>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <ChatSidebar
+          currentConversationId={conversation?.id}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+          onDeleteConversation={handleDeleteConversation}
+        />
+
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Conversation Info Bar */}
+          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {conversation?.title || 'New Conversation'}
+              </h2>
+              {conversation && (
+                <p className="text-xs text-gray-500">
+                  Model: {conversation.model}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Calendar Connection Button */}
+              {calendarConnected ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-green-600 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Calendar Connected
+                  </span>
+                  <button
+                    onClick={handleDisconnectCalendar}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={handleDisconnectCalendar}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  onClick={handleConnectCalendar}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  Disconnect
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Connect Calendar
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleConnectCalendar}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Connect Calendar
-              </button>
-            )}
-            <UserMenu theme="modern" />
+              )}
+            </div>
           </div>
-        </div>
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">

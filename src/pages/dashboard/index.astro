@@ -1,6 +1,5 @@
 ---
-import BaseLayout from '@layouts/BaseLayout.astro';
-import DashboardHeader from '@components/DashboardHeader';
+import AppHeader from '@components/AppHeader';
 import { findUserByClerkId } from '@lib/db/repositories/users';
 
 export const prerender = false;
@@ -22,13 +21,27 @@ const firstName = dbUser?.first_name || 'User';
 const email = dbUser?.email || '';
 ---
 
-<BaseLayout title="Dashboard - Keep Choosing Good" description="Your personal dashboard">
-  <div class="dashboard">
-    <!-- Header Section -->
-    <DashboardHeader firstName={firstName} client:only="react" />
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Keep Choosing Good</title>
+    <meta name="description" content="Your personal dashboard" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <!-- Unified Header -->
+      <AppHeader theme="modern" currentPage="dashboard" client:only="react" />
 
-    <!-- Main Content -->
-    <main class="dashboard-content">
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <h1 class="welcome-title">Welcome back, {firstName}!</h1>
+        <p class="welcome-subtitle">Here's what's happening with your account today.</p>
+      </div>
+
+      <!-- Main Content -->
+      <main class="dashboard-content">
       <div class="cards-grid">
         <!-- Profile Card -->
         <section class="card profile-card">
@@ -184,48 +197,51 @@ const email = dbUser?.email || '';
       </div>
     </main>
   </div>
-</BaseLayout>
+  </body>
+</html>
 
 <style>
-  .dashboard {
-    min-height: 100vh;
+  :root {
+    --color-primary: #4f46e5;
+    --color-text: #1f2937;
+    --color-text-light: #6b7280;
+    --color-background: #ffffff;
+    --color-surface: #f9fafb;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--color-background);
   }
 
-  /* Header Styles */
-  .dashboard-header {
+  .dashboard {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+  }
+
+  /* Welcome Section */
+  .welcome-section {
     background: var(--color-surface);
     border-bottom: 1px solid #e5e7eb;
     padding: 2rem;
   }
 
-  .header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .header-left {
-    flex: 1;
-  }
-
-  .dashboard-title {
+  .welcome-title {
     font-size: 2rem;
     color: var(--color-text);
     margin-bottom: 0.5rem;
+    font-weight: 800;
   }
 
-  .dashboard-subtitle {
+  .welcome-subtitle {
     font-size: 1rem;
     color: var(--color-text-light);
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
   }
 
   /* Main Content */

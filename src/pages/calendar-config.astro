@@ -4,6 +4,7 @@
  * Allows users to map their Google Calendars to entity types (family, personal, work)
  */
 
+import AppHeader from '@components/AppHeader';
 import { initializeDatabase } from '../lib/db';
 import { findUserByClerkId } from '../lib/db/repositories/users';
 
@@ -29,8 +30,27 @@ if (!dbUser) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar Configuration - Keep Choosing Good</title>
+    <style>
+      :root {
+        --color-primary: #4f46e5;
+        --color-text: #1f2937;
+        --color-background: #f9fafb;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--color-background);
+      }
+    </style>
   </head>
-  <body class="bg-gray-50 min-h-screen">
+  <body>
+    <!-- Unified Header -->
+    <AppHeader theme="modern" currentPage="calendar" client:only="react" />
+
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="mb-8">
@@ -103,11 +123,6 @@ if (!dbUser) {
             Add Calendar Mapping
           </button>
         </form>
-      </div>
-
-      <!-- Back Link -->
-      <div class="mt-8">
-        <a href="/chat" class="text-blue-600 hover:text-blue-800">← Back to Chat</a>
       </div>
     </div>
 
