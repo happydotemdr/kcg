@@ -19,7 +19,7 @@ if (existsSync(envLocalPath)) {
 }
 
 import { initializeDatabase, testConnection, closeDatabase } from '../src/lib/db';
-import { runInitialMigration } from '../src/lib/db/migrations';
+import { runAllMigrations } from '../src/lib/db/migrations';
 
 async function main() {
   console.log('🚀 Initializing Keep Choosing Good database...\n');
@@ -37,9 +37,9 @@ async function main() {
       throw new Error('Failed to connect to database');
     }
 
-    // Run migrations
+    // Run all migrations (includes initial schema + calendar mappings)
     console.log('\n📦 Running database migrations...');
-    await runInitialMigration();
+    await runAllMigrations();
 
     console.log('\n✅ Database initialization completed successfully!');
     console.log('\n📋 Next steps:');

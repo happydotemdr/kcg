@@ -13,10 +13,10 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4321/api/auth/google/callback';
 
-// Required scopes for calendar access
+// Required scopes for calendar access (full CRUD permissions)
 export const CALENDAR_SCOPES = [
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/calendar.events.readonly',
+  'https://www.googleapis.com/auth/calendar', // Full calendar access for CRUD operations
+  'https://www.googleapis.com/auth/calendar.events', // Full event access
 ];
 
 /**
@@ -244,4 +244,277 @@ function formatDateTime(dateString: string): string {
     minute: '2-digit',
     hour12: true,
   });
+}
+
+/**
+ * Interface for creating a calendar event
+ */
+export interface CreateEventParams {
+  summary: string;
+  description?: string;
+  location?: string;
+  start: {
+    dateTime?: string; // ISO 8601 format
+    date?: string; // YYYY-MM-DD for all-day events
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  attendees?: Array<{ email: string }>;
+  reminders?: {
+    useDefault: boolean;
+    overrides?: Array<{
+      method: 'email' | 'popup';
+      minutes: number;
+    }>;
+  };
+}
+
+/**
+ * Interface for updating a calendar event
+ */
+export interface UpdateEventParams extends Partial<CreateEventParams> {
+  eventId: string;
+}
+
+/**
+ * Google Calendar List item interface
+ */
+export interface GoogleCalendarListItem {
+  id: string;
+  summary: string;
+  description?: string;
+  timeZone: string;
+  primary?: boolean;
+  accessRole: string;
+  backgroundColor?: string;
+}
+
+/**
+ * List all calendars for a user
+ * Used for calendar configuration/mapping
+ */
+export async function listCalendars(userId: string): Promise<GoogleCalendarListItem[]> {
+  try {
+    const auth = await getAuthenticatedClient(userId);
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const response = await calendar.calendarList.list();
+    const calendars = response.data.items || [];
+
+    console.log(`[Calendar] Listed ${calendars.length} calendars for user ${userId}`);
+
+    return calendars.map((cal) => ({
+      id: cal.id!,
+      summary: cal.summary || 'Unnamed Calendar',
+      description: cal.description || undefined,
+      timeZone: cal.timeZone || 'UTC',
+      primary: cal.primary || false,
+      accessRole: cal.accessRole || 'reader',
+      backgroundColor: cal.backgroundColor || undefined,
+    }));
+  } catch (error) {
+    console.error('[Calendar] Error listing calendars:', error);
+    throw new Error(`Failed to list calendars: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Create a new calendar event
+ */
+export async function createEvent(
+  userId: string,
+  params: CreateEventParams,
+  calendarId: string = 'primary'
+): Promise<CalendarEvent> {
+  try {
+    const auth = await getAuthenticatedClient(userId);
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    console.log(`[Calendar] Creating event on calendar ${calendarId} for user ${userId}:`, params.summary);
+
+    const response = await calendar.events.insert({
+      calendarId,
+      requestBody: {
+        summary: params.summary,
+        description: params.description,
+        location: params.location,
+        start: params.start,
+        end: params.end,
+        attendees: params.attendees,
+        reminders: params.reminders,
+      },
+    });
+
+    const event = response.data;
+
+    console.log(`[Calendar] Event created successfully: ${event.id}`);
+
+    return {
+      id: event.id!,
+      summary: event.summary || 'No title',
+      description: event.description || undefined,
+      start: {
+        dateTime: event.start?.dateTime || undefined,
+        date: event.start?.date || undefined,
+        timeZone: event.start?.timeZone || undefined,
+      },
+      end: {
+        dateTime: event.end?.dateTime || undefined,
+        date: event.end?.date || undefined,
+        timeZone: event.end?.timeZone || undefined,
+      },
+      location: event.location || undefined,
+      attendees: event.attendees?.map((a) => ({
+        email: a.email!,
+        displayName: a.displayName || undefined,
+        responseStatus: a.responseStatus || undefined,
+      })),
+      htmlLink: event.htmlLink!,
+      status: event.status!,
+    };
+  } catch (error) {
+    console.error('[Calendar] Error creating event:', error);
+    throw new Error(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Update an existing calendar event
+ */
+export async function updateEvent(
+  userId: string,
+  params: UpdateEventParams,
+  calendarId: string = 'primary'
+): Promise<CalendarEvent> {
+  try {
+    const auth = await getAuthenticatedClient(userId);
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const { eventId, ...updates } = params;
+
+    console.log(`[Calendar] Updating event ${eventId} on calendar ${calendarId} for user ${userId}`);
+
+    const response = await calendar.events.patch({
+      calendarId,
+      eventId,
+      requestBody: {
+        summary: updates.summary,
+        description: updates.description,
+        location: updates.location,
+        start: updates.start,
+        end: updates.end,
+        attendees: updates.attendees,
+        reminders: updates.reminders,
+      },
+    });
+
+    const event = response.data;
+
+    console.log(`[Calendar] Event updated successfully: ${event.id}`);
+
+    return {
+      id: event.id!,
+      summary: event.summary || 'No title',
+      description: event.description || undefined,
+      start: {
+        dateTime: event.start?.dateTime || undefined,
+        date: event.start?.date || undefined,
+        timeZone: event.start?.timeZone || undefined,
+      },
+      end: {
+        dateTime: event.end?.dateTime || undefined,
+        date: event.end?.date || undefined,
+        timeZone: event.end?.timeZone || undefined,
+      },
+      location: event.location || undefined,
+      attendees: event.attendees?.map((a) => ({
+        email: a.email!,
+        displayName: a.displayName || undefined,
+        responseStatus: a.responseStatus || undefined,
+      })),
+      htmlLink: event.htmlLink!,
+      status: event.status!,
+    };
+  } catch (error) {
+    console.error('[Calendar] Error updating event:', error);
+    throw new Error(`Failed to update event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Delete a calendar event
+ */
+export async function deleteEvent(
+  userId: string,
+  eventId: string,
+  calendarId: string = 'primary'
+): Promise<void> {
+  try {
+    const auth = await getAuthenticatedClient(userId);
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    console.log(`[Calendar] Deleting event ${eventId} from calendar ${calendarId} for user ${userId}`);
+
+    await calendar.events.delete({
+      calendarId,
+      eventId,
+    });
+
+    console.log(`[Calendar] Event deleted successfully: ${eventId}`);
+  } catch (error) {
+    console.error('[Calendar] Error deleting event:', error);
+    throw new Error(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Get a specific calendar event by ID
+ */
+export async function getEvent(
+  userId: string,
+  eventId: string,
+  calendarId: string = 'primary'
+): Promise<CalendarEvent> {
+  try {
+    const auth = await getAuthenticatedClient(userId);
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const response = await calendar.events.get({
+      calendarId,
+      eventId,
+    });
+
+    const event = response.data;
+
+    return {
+      id: event.id!,
+      summary: event.summary || 'No title',
+      description: event.description || undefined,
+      start: {
+        dateTime: event.start?.dateTime || undefined,
+        date: event.start?.date || undefined,
+        timeZone: event.start?.timeZone || undefined,
+      },
+      end: {
+        dateTime: event.end?.dateTime || undefined,
+        date: event.end?.date || undefined,
+        timeZone: event.end?.timeZone || undefined,
+      },
+      location: event.location || undefined,
+      attendees: event.attendees?.map((a) => ({
+        email: a.email!,
+        displayName: a.displayName || undefined,
+        responseStatus: a.responseStatus || undefined,
+      })),
+      htmlLink: event.htmlLink!,
+      status: event.status!,
+    };
+  } catch (error) {
+    console.error('[Calendar] Error fetching event:', error);
+    throw new Error(`Failed to fetch event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }

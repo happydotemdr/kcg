@@ -38,12 +38,15 @@ This project has been upgraded to the latest versions:
    - **Claude Chat** (`/chat`): Clean, modern design with smooth animations and account avatar
    - **ChatGPT** (`/chatgpt`): Retro DOS terminal theme with CRT effects, scanlines, command-line aesthetic, and DOS-styled user menu
 8. **Responsive Design**: Works seamlessly on desktop and mobile devices
-9. **Claude Agent SDK Integration**: Google Calendar tool using Anthropic's tool use feature
-   - Agentic workflow with automatic tool execution
-   - Read upcoming calendar events (next 5 events)
-   - OAuth2 authentication for secure access
-   - Real-time tool use indicators in chat UI
-   - Per-user token storage in PostgreSQL
+9. **Claude Agent SDK Integration**: Google Calendar with **Full CRUD Operations** and **Multi-Calendar Support**
+   - **Full CRUD**: Create, Read, Update, Delete calendar events via natural language
+   - **Multi-Calendar Support**: Intelligent routing to family, personal, or work calendars
+   - **Smart Calendar Selection**: Automatic inference from keywords ("dentist" → family, "investor meeting" → work)
+   - **Agentic workflow**: Automatic tool execution with streaming feedback
+   - **OAuth2 authentication**: Secure access with write permissions
+   - **Per-user token storage**: PostgreSQL-backed token management
+   - **Configuration UI**: Web interface for mapping calendars to entity types at `/calendar-config`
+   - See [CALENDAR_CRUD_README.md](./CALENDAR_CRUD_README.md) for complete documentation
 
 ## Project Structure
 

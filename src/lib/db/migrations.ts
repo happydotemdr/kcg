@@ -132,3 +132,70 @@ export async function rollbackLastMigration(): Promise<void> {
     console.log('Migration rolled back successfully');
   });
 }
+
+/**
+ * Run specific migration file
+ * Used for sequential migrations after initial schema
+ */
+export async function runMigrationFile(version: string, name: string, filePath: string): Promise<void> {
+  try {
+    console.log(`Checking migration ${version} (${name})...`);
+
+    // Check if migration has been executed
+    const isExecuted = await isMigrationExecuted(version);
+
+    if (isExecuted) {
+      console.log(`Migration ${version} (${name}) already executed, skipping...`);
+      return;
+    }
+
+    // Read migration file
+    const migrationSql = readFileSync(filePath, 'utf-8');
+
+    await transaction(async (client) => {
+      console.log(`Executing migration ${version} (${name})...`);
+      await client.query(migrationSql);
+      await recordMigration(client, version, name);
+      console.log(`Migration ${version} (${name}) completed successfully`);
+    });
+  } catch (error) {
+    console.error(`Migration ${version} (${name}) failed:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Run all pending migrations
+ * Executes migration files in order
+ */
+export async function runAllMigrations(): Promise<void> {
+  try {
+    console.log('Running all pending migrations...');
+
+    // Create migrations tracking table
+    await query(CREATE_MIGRATIONS_TABLE);
+
+    // Run initial schema first (001)
+    await runInitialMigration();
+
+    // Define additional migrations
+    const migrations = [
+      {
+        version: '003',
+        name: 'user_calendar_mappings',
+        file: join(__dirname, 'migrations', '003_user_calendar_mappings.sql'),
+      },
+      // Add more migrations here as needed
+    ];
+
+    // Run each migration in sequence
+    for (const migration of migrations) {
+      await runMigrationFile(migration.version, migration.name, migration.file);
+    }
+
+    console.log('All migrations completed successfully');
+  } catch (error) {
+    console.error('Migration process failed:', error);
+    throw error;
+  }
+}

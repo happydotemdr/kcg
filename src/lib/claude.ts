@@ -7,7 +7,19 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { Message as AnthropicMessage } from '@anthropic-ai/sdk/resources/messages';
 import type { MessageParam, Tool } from '@anthropic-ai/sdk/resources/messages';
 import type { Message } from '../types/chat';
-import { getUpcomingEvents, formatEventsForChat, isCalendarConnected } from './google-calendar';
+import {
+  getUpcomingEvents,
+  formatEventsForChat,
+  isCalendarConnected,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getEvent,
+  type CreateEventParams,
+  type UpdateEventParams,
+} from './google-calendar';
+import { selectCalendar, formatCalendarSelectionMessage } from './calendar-mapper';
+import type { CalendarEntityType } from './db/types';
 
 // Initialize the Anthropic client
 const client = new Anthropic({
@@ -26,11 +38,14 @@ export const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 export const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant created by Anthropic. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided. You have access to tools that allow you to help users with their Google Calendar.`;
 
 /**
- * Calendar tool definition for Claude
+ * Calendar tool definitions for Claude
+ * Supports full CRUD operations on Google Calendar
  */
-export const CALENDAR_TOOL: Tool = {
+
+// READ: Get upcoming events
+export const GET_CALENDAR_EVENTS_TOOL: Tool = {
   name: 'get_calendar_events',
-  description: 'Retrieves the next 5 upcoming events from the user\'s Google Calendar. Use this when the user asks about their schedule, upcoming events, meetings, or appointments. Only works if the user has connected their Google Calendar.',
+  description: 'Retrieves upcoming events from the user\'s Google Calendar. Use this when the user asks about their schedule, upcoming events, meetings, or appointments. The system will automatically select the appropriate calendar based on context (family, personal, or work).',
   input_schema: {
     type: 'object',
     properties: {
@@ -39,10 +54,155 @@ export const CALENDAR_TOOL: Tool = {
         description: 'Maximum number of events to retrieve (default: 5, max: 10)',
         default: 5,
       },
+      entity_type: {
+        type: 'string',
+        enum: ['family', 'personal', 'work'],
+        description: 'Optional: Specific calendar to query. If not provided, will be inferred from context.',
+      },
     },
     required: [],
   },
 };
+
+// CREATE: Add new event
+export const CREATE_CALENDAR_EVENT_TOOL: Tool = {
+  name: 'create_calendar_event',
+  description: 'Creates a new event on the user\'s Google Calendar. Use this when the user wants to add, schedule, or create an appointment, meeting, or reminder. The system will automatically select the appropriate calendar (family, personal, or work) based on the event context.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      summary: {
+        type: 'string',
+        description: 'Event title/summary (required)',
+      },
+      start_datetime: {
+        type: 'string',
+        description: 'Event start date and time in ISO 8601 format (e.g., "2025-11-15T14:00:00-05:00"). For all-day events, use start_date instead.',
+      },
+      start_date: {
+        type: 'string',
+        description: 'For all-day events, the start date in YYYY-MM-DD format (e.g., "2025-11-15")',
+      },
+      end_datetime: {
+        type: 'string',
+        description: 'Event end date and time in ISO 8601 format. For all-day events, use end_date instead.',
+      },
+      end_date: {
+        type: 'string',
+        description: 'For all-day events, the end date in YYYY-MM-DD format',
+      },
+      description: {
+        type: 'string',
+        description: 'Optional event description or notes',
+      },
+      location: {
+        type: 'string',
+        description: 'Optional event location',
+      },
+      attendees: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+        description: 'Optional array of attendee email addresses',
+      },
+      entity_type: {
+        type: 'string',
+        enum: ['family', 'personal', 'work'],
+        description: 'Optional: Specific calendar to create event on. If not provided, will be inferred from event context (e.g., "dentist" → family, "investor meeting" → work).',
+      },
+    },
+    required: ['summary'],
+  },
+};
+
+// UPDATE: Modify existing event
+export const UPDATE_CALENDAR_EVENT_TOOL: Tool = {
+  name: 'update_calendar_event',
+  description: 'Updates an existing event on the user\'s Google Calendar. Use this when the user wants to reschedule, modify, or change details of an existing event. You must first retrieve the event to get its ID.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      event_id: {
+        type: 'string',
+        description: 'The Google Calendar event ID to update (required). Get this from get_calendar_events first.',
+      },
+      summary: {
+        type: 'string',
+        description: 'New event title/summary',
+      },
+      start_datetime: {
+        type: 'string',
+        description: 'New start date and time in ISO 8601 format',
+      },
+      start_date: {
+        type: 'string',
+        description: 'New start date for all-day events (YYYY-MM-DD)',
+      },
+      end_datetime: {
+        type: 'string',
+        description: 'New end date and time in ISO 8601 format',
+      },
+      end_date: {
+        type: 'string',
+        description: 'New end date for all-day events (YYYY-MM-DD)',
+      },
+      description: {
+        type: 'string',
+        description: 'New event description',
+      },
+      location: {
+        type: 'string',
+        description: 'New event location',
+      },
+      attendees: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+        description: 'New list of attendee email addresses',
+      },
+      entity_type: {
+        type: 'string',
+        enum: ['family', 'personal', 'work'],
+        description: 'Optional: Which calendar the event is on. If not provided, will be inferred.',
+      },
+    },
+    required: ['event_id'],
+  },
+};
+
+// DELETE: Remove event
+export const DELETE_CALENDAR_EVENT_TOOL: Tool = {
+  name: 'delete_calendar_event',
+  description: 'Deletes an event from the user\'s Google Calendar. Use this when the user wants to cancel, remove, or delete an event. You must first retrieve the event to get its ID. Always confirm the event details with the user before deleting.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      event_id: {
+        type: 'string',
+        description: 'The Google Calendar event ID to delete (required). Get this from get_calendar_events first.',
+      },
+      entity_type: {
+        type: 'string',
+        enum: ['family', 'personal', 'work'],
+        description: 'Optional: Which calendar the event is on. If not provided, will be inferred.',
+      },
+    },
+    required: ['event_id'],
+  },
+};
+
+// All calendar tools
+export const CALENDAR_TOOLS: Tool[] = [
+  GET_CALENDAR_EVENTS_TOOL,
+  CREATE_CALENDAR_EVENT_TOOL,
+  UPDATE_CALENDAR_EVENT_TOOL,
+  DELETE_CALENDAR_EVENT_TOOL,
+];
+
+// Legacy export for backwards compatibility
+export const CALENDAR_TOOL = GET_CALENDAR_EVENTS_TOOL;
 
 /**
  * Convert our Message format to Anthropic's format
@@ -201,33 +361,195 @@ export function estimateTokens(messages: Message[]): number {
 
 /**
  * Execute a tool call
+ * Supports full CRUD operations on Google Calendar
  */
 async function executeTool(
   toolName: string,
   toolInput: any,
-  userId: string
+  userId: string,
+  userMessage: string = ''
 ): Promise<{ success: boolean; result?: string; error?: string }> {
   try {
+    // Check if calendar is connected for all calendar operations
+    const connected = await isCalendarConnected(userId);
+    if (!connected) {
+      return {
+        success: false,
+        error: 'Google Calendar is not connected. Please connect your calendar first by clicking the "Connect Calendar" button.',
+      };
+    }
+
+    // READ: Get calendar events
     if (toolName === 'get_calendar_events') {
-      // Check if calendar is connected
-      const connected = await isCalendarConnected(userId);
-      if (!connected) {
-        return {
-          success: false,
-          error: 'Google Calendar is not connected. Please connect your calendar first by clicking the "Connect Calendar" button.',
-        };
-      }
-
-      // Get max_results from input, default to 5, max 10
       const maxResults = Math.min(toolInput.max_results || 5, 10);
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
 
-      // Fetch calendar events
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Tool:get_calendar_events] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Fetch events from selected calendar
       const events = await getUpcomingEvents(userId, maxResults);
       const formattedEvents = formatEventsForChat(events);
 
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
       return {
         success: true,
-        result: formattedEvents,
+        result: `${calendarInfo}\n\n${formattedEvents}`,
+      };
+    }
+
+    // CREATE: Add new event
+    if (toolName === 'create_calendar_event') {
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar based on event context
+      const eventContext = `${toolInput.summary || ''} ${toolInput.description || ''} ${toolInput.location || ''}`;
+      const selection = await selectCalendar(userId, eventContext, entityType);
+      console.log(`[Tool:create_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Build event parameters
+      const eventParams: CreateEventParams = {
+        summary: toolInput.summary,
+        description: toolInput.description,
+        location: toolInput.location,
+        start: {},
+        end: {},
+      };
+
+      // Handle start time (datetime or date)
+      if (toolInput.start_datetime) {
+        eventParams.start.dateTime = toolInput.start_datetime;
+      } else if (toolInput.start_date) {
+        eventParams.start.date = toolInput.start_date;
+      } else {
+        return {
+          success: false,
+          error: 'Event must have a start time (start_datetime or start_date)',
+        };
+      }
+
+      // Handle end time (datetime or date)
+      if (toolInput.end_datetime) {
+        eventParams.end.dateTime = toolInput.end_datetime;
+      } else if (toolInput.end_date) {
+        eventParams.end.date = toolInput.end_date;
+      } else {
+        return {
+          success: false,
+          error: 'Event must have an end time (end_datetime or end_date)',
+        };
+      }
+
+      // Add attendees if provided
+      if (toolInput.attendees && Array.isArray(toolInput.attendees)) {
+        eventParams.attendees = toolInput.attendees.map((email: string) => ({ email }));
+      }
+
+      // Create the event
+      const createdEvent = await createEvent(userId, eventParams, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent created successfully:\n\n**${createdEvent.summary}**\n📅 ${createdEvent.start.dateTime || createdEvent.start.date}\n${createdEvent.location ? `📍 ${createdEvent.location}\n` : ''}🔗 ${createdEvent.htmlLink}`,
+      };
+    }
+
+    // UPDATE: Modify existing event
+    if (toolName === 'update_calendar_event') {
+      const eventId = toolInput.event_id;
+      if (!eventId) {
+        return {
+          success: false,
+          error: 'Event ID is required to update an event',
+        };
+      }
+
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Tool:update_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Build update parameters
+      const updateParams: UpdateEventParams = {
+        eventId,
+      };
+
+      if (toolInput.summary) updateParams.summary = toolInput.summary;
+      if (toolInput.description) updateParams.description = toolInput.description;
+      if (toolInput.location) updateParams.location = toolInput.location;
+
+      // Handle start time updates
+      if (toolInput.start_datetime || toolInput.start_date) {
+        updateParams.start = {};
+        if (toolInput.start_datetime) {
+          updateParams.start.dateTime = toolInput.start_datetime;
+        } else if (toolInput.start_date) {
+          updateParams.start.date = toolInput.start_date;
+        }
+      }
+
+      // Handle end time updates
+      if (toolInput.end_datetime || toolInput.end_date) {
+        updateParams.end = {};
+        if (toolInput.end_datetime) {
+          updateParams.end.dateTime = toolInput.end_datetime;
+        } else if (toolInput.end_date) {
+          updateParams.end.date = toolInput.end_date;
+        }
+      }
+
+      // Handle attendees updates
+      if (toolInput.attendees && Array.isArray(toolInput.attendees)) {
+        updateParams.attendees = toolInput.attendees.map((email: string) => ({ email }));
+      }
+
+      // Update the event
+      const updatedEvent = await updateEvent(userId, updateParams, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent updated successfully:\n\n**${updatedEvent.summary}**\n📅 ${updatedEvent.start.dateTime || updatedEvent.start.date}\n${updatedEvent.location ? `📍 ${updatedEvent.location}\n` : ''}🔗 ${updatedEvent.htmlLink}`,
+      };
+    }
+
+    // DELETE: Remove event
+    if (toolName === 'delete_calendar_event') {
+      const eventId = toolInput.event_id;
+      if (!eventId) {
+        return {
+          success: false,
+          error: 'Event ID is required to delete an event',
+        };
+      }
+
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Tool:delete_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Get event details before deleting (for confirmation message)
+      let eventSummary = 'Event';
+      try {
+        const event = await getEvent(userId, eventId, selection.calendarId);
+        eventSummary = event.summary;
+      } catch (error) {
+        // Continue with deletion even if we can't get the event details
+        console.warn('Could not fetch event details before deletion:', error);
+      }
+
+      // Delete the event
+      await deleteEvent(userId, eventId, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent "${eventSummary}" has been deleted successfully.`,
       };
     }
 
@@ -236,7 +558,7 @@ async function executeTool(
       error: `Unknown tool: ${toolName}`,
     };
   } catch (error) {
-    console.error(`Error executing tool ${toolName}:`, error);
+    console.error(`[Tool:${toolName}] Error:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -274,17 +596,25 @@ export async function streamChatCompletionWithTools(
     const maxIterations = 5; // Prevent infinite loops
     let iteration = 0;
 
+    // Get the user's latest message for context in calendar selection
+    const userMessage = messages.length > 0 && messages[messages.length - 1].role === 'user'
+      ? messages[messages.length - 1].content
+          .filter(block => block.type === 'text')
+          .map(block => (block as any).text)
+          .join(' ')
+      : '';
+
     // Agentic loop: continue until Claude stops using tools
     while (iteration < maxIterations) {
       iteration++;
 
-      // Create streaming request with tools
+      // Create streaming request with all calendar tools (CRUD)
       const stream = client.messages.stream({
         model,
         max_tokens: 4096,
         system: systemPrompt,
         messages: anthropicMessages,
-        tools: [CALENDAR_TOOL],
+        tools: CALENDAR_TOOLS, // Use all CRUD tools
       });
 
       let currentResponse: any = null;
@@ -318,8 +648,8 @@ export async function streamChatCompletionWithTools(
           // Notify UI that tool is being used
           onToolUse(toolName, toolInput);
 
-          // Execute the tool
-          const toolResult = await executeTool(toolName, toolInput, userId);
+          // Execute the tool with user message context for calendar selection
+          const toolResult = await executeTool(toolName, toolInput, userId, userMessage);
 
           // Add assistant's response (with tool_use) to messages
           anthropicMessages.push({
