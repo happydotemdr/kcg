@@ -314,23 +314,23 @@ export default function DosChat() {
                   [LOAD CALENDAR.SYS]
                 </button>
               )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto dos-screen p-4 font-mono text-green-400">
-          {error && (
-            <div className="border border-red-500 p-2 mb-4 bg-red-900 bg-opacity-20">
-              <span className="text-red-400">
-                *** ERROR: {error} ***
-              </span>
-            </div>
-          )}
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto dos-screen p-4 font-mono text-green-400">
+            {error && (
+              <div className="border border-red-500 p-2 mb-4 bg-red-900 bg-opacity-20">
+                <span className="text-red-400">
+                  *** ERROR: {error} ***
+                </span>
+              </div>
+            )}
 
-          {messages.length === 0 && !error && (
-            <div className="flex flex-col items-center justify-center h-full">
-              <pre className="text-center text-green-400 mb-4">
+            {messages.length === 0 && !error && (
+              <div className="flex flex-col items-center justify-center h-full">
+                <pre className="text-center text-green-400 mb-4">
 {`╔═══════════════════════════════════════════════╗
 ║                                               ║
 ║     ██████╗██╗  ██╗ █████╗ ████████╗         ║
@@ -350,84 +350,85 @@ export default function DosChat() {
 ║        ARTIFICIAL INTELLIGENCE SYSTEM         ║
 ║                                               ║
 ╚═══════════════════════════════════════════════╝`}
-              </pre>
-              <div className="text-center space-y-2">
-                <p>SYSTEM READY. AWAITING INPUT...</p>
-                <p className="text-sm opacity-75">Type your query below</p>
+                </pre>
+                <div className="text-center space-y-2">
+                  <p>SYSTEM READY. AWAITING INPUT...</p>
+                  <p className="text-sm opacity-75">Type your query below</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {messages.map((msg, idx) => (
-            <DosMessage key={msg.id} message={msg} index={idx} />
-          ))}
+            {messages.map((msg, idx) => (
+              <DosMessage key={msg.id} message={msg} index={idx} />
+            ))}
 
-          {/* Streaming Message */}
-          {isStreaming && streamingText && (
-            <div className="mb-4">
-              <div className="mb-1">
-                <span className="text-yellow-400">&gt; CHATGPT:</span>
+            {/* Streaming Message */}
+            {isStreaming && streamingText && (
+              <div className="mb-4">
+                <div className="mb-1">
+                  <span className="text-yellow-400">&gt; CHATGPT:</span>
+                </div>
+                <div className="ml-4 whitespace-pre-wrap">
+                  {streamingText}
+                  <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
+                </div>
               </div>
-              <div className="ml-4 whitespace-pre-wrap">
-                {streamingText}
-                <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Tool Use Indicator */}
-          {toolInUse && (
-            <div className="mb-4 border border-cyan-500 p-2 bg-cyan-900 bg-opacity-10">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">
-                  [EXEC] {toolInUse === 'get_calendar_events' ? 'CALENDAR.SYS' : toolInUse}
-                </span>
-                <span className="text-cyan-400 animate-pulse">...</span>
+            {/* Tool Use Indicator */}
+            {toolInUse && (
+              <div className="mb-4 border border-cyan-500 p-2 bg-cyan-900 bg-opacity-10">
+                <div className="flex items-center gap-2">
+                  <span className="text-cyan-400">
+                    [EXEC] {toolInUse === 'get_calendar_events' ? 'CALENDAR.SYS' : toolInUse}
+                  </span>
+                  <span className="text-cyan-400 animate-pulse">...</span>
+                </div>
+                <div className="ml-4 text-xs text-cyan-300 mt-1">
+                  &gt; LOADING DATA FROM GOOGLE CALENDAR API
+                </div>
               </div>
-              <div className="ml-4 text-xs text-cyan-300 mt-1">
-                &gt; LOADING DATA FROM GOOGLE CALENDAR API
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Loading indicator */}
-          {isStreaming && !streamingText && !toolInUse && (
-            <div className="mb-4">
-              <div className="mb-1">
-                <span className="text-yellow-400">&gt; CHATGPT:</span>
+            {/* Loading indicator */}
+            {isStreaming && !streamingText && !toolInUse && (
+              <div className="mb-4">
+                <div className="mb-1">
+                  <span className="text-yellow-400">&gt; CHATGPT:</span>
+                </div>
+                <div className="ml-4">
+                  <span>PROCESSING</span>
+                  <span className="animate-pulse">...</span>
+                </div>
               </div>
-              <div className="ml-4">
-                <span>PROCESSING</span>
-                <span className="animate-pulse">...</span>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="dos-input-area">
+            {isStreaming && (
+              <div className="px-4 py-2 border-t-2 border-yellow-500 bg-yellow-900 bg-opacity-20">
+                <div className="flex items-center justify-between font-mono text-yellow-400">
+                  <span className="text-sm">
+                    [STATUS: PROCESSING REQUEST...]
+                  </span>
+                  <button
+                    onClick={handleCancelStreaming}
+                    className="text-red-400 hover:text-red-300 font-bold px-2 border border-red-500"
+                  >
+                    [ABORT]
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="dos-input-area">
-          {isStreaming && (
-            <div className="px-4 py-2 border-t-2 border-yellow-500 bg-yellow-900 bg-opacity-20">
-              <div className="flex items-center justify-between font-mono text-yellow-400">
-                <span className="text-sm">
-                  [STATUS: PROCESSING REQUEST...]
-                </span>
-                <button
-                  onClick={handleCancelStreaming}
-                  className="text-red-400 hover:text-red-300 font-bold px-2 border border-red-500"
-                >
-                  [ABORT]
-                </button>
-              </div>
-            </div>
-          )}
-
-          <DosInput
-            onSend={handleSendMessage}
-            disabled={isStreaming}
-          />
+            <DosInput
+              onSend={handleSendMessage}
+              disabled={isStreaming}
+            />
+          </div>
         </div>
       </div>
     </div>

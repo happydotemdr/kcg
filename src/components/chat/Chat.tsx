@@ -379,31 +379,32 @@ export default function Chat() {
           )}
 
           <div ref={messagesEndRef} />
-        </div>
+          </div>
 
-        {/* Input Area */}
-        <div>
-          {isStreaming && (
-            <div className="px-6 py-2 bg-yellow-50 border-t border-yellow-200 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-yellow-800">
-                  Claude is thinking...
-                </span>
-                <button
-                  onClick={handleCancelStreaming}
-                  className="text-red-600 hover:text-red-700 font-medium"
-                >
-                  Cancel
-                </button>
+          {/* Input Area */}
+          <div>
+            {isStreaming && (
+              <div className="px-6 py-2 bg-yellow-50 border-t border-yellow-200 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-yellow-800">
+                    Claude is thinking...
+                  </span>
+                  <button
+                    onClick={handleCancelStreaming}
+                    className="text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <ChatInput
-            onSend={handleSendMessage}
-            disabled={isStreaming}
-            placeholder="Type your message... (Shift+Enter for new line)"
-          />
+            <ChatInput
+              onSend={handleSendMessage}
+              disabled={isStreaming}
+              placeholder="Type your message... (Shift+Enter for new line)"
+            />
+          </div>
         </div>
       </div>
     </div>
