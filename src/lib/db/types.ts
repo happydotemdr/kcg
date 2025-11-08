@@ -96,3 +96,31 @@ export type CreateGoogleOAuthToken = Omit<GoogleOAuthToken, 'id' | 'created_at' 
   created_at?: Date;
   updated_at?: Date;
 };
+
+/**
+ * Calendar Entity Types
+ * Represents different calendar categories for multi-calendar support
+ */
+export type CalendarEntityType = 'family' | 'personal' | 'work';
+
+/**
+ * User Calendar Mapping
+ * Maps a user's Google Calendar to an entity type
+ */
+export interface UserCalendarMapping {
+  id: string;
+  user_id: string;
+  google_calendar_id: string;
+  calendar_name: string;
+  entity_type: CalendarEntityType;
+  is_default: boolean;
+  calendar_time_zone: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateUserCalendarMapping = Omit<UserCalendarMapping, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
