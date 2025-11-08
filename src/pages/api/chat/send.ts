@@ -6,7 +6,7 @@
 
 import type { APIRoute } from 'astro';
 import { v4 as uuidv4 } from 'uuid';
-import { streamChatCompletionWithTools } from '../../../lib/claude';
+import { streamChatCompletionWithTools, buildEnhancedSystemPrompt } from '../../../lib/claude';
 import {
   createConversation,
   getConversation,
@@ -89,7 +89,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
     } else {
-      conversation = await createConversation(userMessage, clerkUserId, model, systemPrompt);
+      // Build enhanced system prompt with date awareness and calendar mappings
+      const enhancedSystemPrompt = await buildEnhancedSystemPrompt(
+        dbUser.id,
+        systemPrompt // Use custom prompt if provided, otherwise defaults to DEFAULT_SYSTEM_PROMPT
+      );
+      conversation = await createConversation(userMessage, clerkUserId, model, enhancedSystemPrompt);
     }
 
     // Add user message to conversation if it already existed
