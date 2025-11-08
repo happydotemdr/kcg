@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DosMessage from './DosMessage';
 import DosInput from './DosInput';
 import DosSidebar from './DosSidebar';
-import UserMenu from '../UserMenu';
+import AppHeader from '../AppHeader';
 import type { Message, Conversation } from '../../types/chat';
 
 export default function DosChat() {
@@ -262,41 +262,36 @@ export default function DosChat() {
   };
 
   return (
-    <div className="dos-container flex h-screen bg-black relative overflow-hidden">
+    <div className="dos-container flex h-screen bg-black relative overflow-hidden flex-col">
+      {/* Unified DOS Header */}
+      <AppHeader theme="dos" currentPage="chatgpt" />
+
       {/* CRT Scanlines Effect */}
       <div className="dos-scanlines pointer-events-none"></div>
 
-      {/* Sidebar */}
-      <DosSidebar
-        currentConversationId={conversation?.id}
-        onSelectConversation={handleSelectConversation}
-        onNewChat={handleNewChat}
-        onDeleteConversation={handleDeleteConversation}
-      />
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <DosSidebar
+          currentConversationId={conversation?.id}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+          onDeleteConversation={handleDeleteConversation}
+        />
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative">
-        {/* DOS Header */}
-        <div className="dos-header border-b-2 border-green-500 p-2 font-mono">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <span className="text-green-400">═══════════════════════════════════════════════════</span>
-            </div>
-            <UserMenu theme="dos" />
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-green-400">
-              ┌─ CHATGPT.EXE v4.0 ─ {conversation?.title || 'NEW SESSION'} ─┐
-            </span>
-            <span className="text-green-400">[{formatTime(currentTime)}]</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-green-400">
-              └───────────────────────────────────────────────────────────────┘
-            </span>
-            {/* Calendar Connection Status */}
-            <div className="flex items-center gap-2">
-              {calendarConnected ? (
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col relative">
+          {/* Session Info Bar */}
+          <div className="border-b-2 border-green-500 p-2 font-mono bg-black">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-green-400 text-sm">
+                  ┌─ SESSION: {conversation?.title || 'NEW'} ─┐
+                </span>
+                <span className="text-green-400 text-xs">[{formatTime(currentTime)}]</span>
+              </div>
+              {/* Calendar Connection Status */}
+              <div className="flex items-center gap-2">
+                {calendarConnected ? (
                 <div className="flex items-center gap-2">
                   <button
                     className="text-xs text-green-400 border border-green-500 px-2 py-0.5 hover:bg-green-900 hover:bg-opacity-20"

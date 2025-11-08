@@ -61,13 +61,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           <span class="logo-text">Keep Choosing Good</span>
         </a>
 
-        <div class="nav-links">
-          <NavigationAuth isInNav={true} client:only="react" />
-        </div>
-
-        <div class="nav-auth">
-          <NavigationAuth client:only="react" />
-        </div>
+        <NavigationAuth isInNav={true} client:only="react" />
       </div>
     </nav>
 
@@ -195,6 +189,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-xl);
+    flex-wrap: wrap;
   }
 
   .nav-logo {
@@ -218,14 +213,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     background-clip: text;
     font-weight: 800;
     letter-spacing: -0.03em;
-  }
-
-  .nav-links {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2xl);
-    flex: 1;
-    justify-content: center;
   }
 
   .nav-link {
@@ -255,12 +242,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
   .nav-link:hover::after {
     width: 100%;
-  }
-
-  .nav-auth {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
   }
 
   .dashboard-link {
@@ -312,7 +293,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   /* Responsive Design */
   @media (max-width: 768px) {
     .nav-container {
-      flex-wrap: wrap;
       padding: var(--spacing-md);
       gap: var(--spacing-md);
     }
@@ -321,21 +301,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       font-size: 1.125rem;
     }
 
-    .nav-links {
-      order: 3;
-      width: 100%;
-      justify-content: flex-start;
-      gap: var(--spacing-lg);
-      padding-top: var(--spacing-md);
-      border-top: 1px solid var(--color-border);
-    }
-
     .nav-link {
       font-size: 0.875rem;
-    }
-
-    .nav-auth {
-      margin-left: auto;
     }
   }
 
