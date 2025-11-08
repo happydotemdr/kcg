@@ -38,6 +38,79 @@ export const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 export const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant created by Anthropic. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided. You have access to tools that allow you to help users with their Google Calendar.`;
 
 /**
+ * Build an enhanced system prompt with date awareness and calendar mappings
+ * This helps Claude understand:
+ * - What "today", "tomorrow", "next week", etc. mean
+ * - Which calendars the user has configured (family, personal, work)
+ *
+ * @param userId - Database user ID
+ * @param basePrompt - Base system prompt to enhance (defaults to DEFAULT_SYSTEM_PROMPT)
+ * @returns Enhanced system prompt with date and calendar context
+ */
+export async function buildEnhancedSystemPrompt(
+  userId: string,
+  basePrompt: string = DEFAULT_SYSTEM_PROMPT
+): Promise<string> {
+  // Get current date information
+  const now = new Date();
+  const dateString = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const timeString = now.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZoneName: 'short',
+  });
+
+  let enhancedPrompt = basePrompt;
+
+  // Add date/time context
+  enhancedPrompt += `\n\n## Current Date & Time\n`;
+  enhancedPrompt += `Today is ${dateString} at ${timeString}.\n`;
+  enhancedPrompt += `Use this information when the user mentions relative dates like "today", "tomorrow", "next Monday", "last week", etc.`;
+
+  // Add calendar mappings context
+  try {
+    const { findMappingsByUserId } = await import('./db/repositories/calendar-mappings');
+    const mappings = await findMappingsByUserId(userId);
+
+    if (mappings.length > 0) {
+      enhancedPrompt += `\n\n## User's Calendar Configuration\n`;
+      enhancedPrompt += `The user has configured the following calendars:\n\n`;
+
+      for (const mapping of mappings) {
+        const defaultMarker = mapping.is_default ? ' (DEFAULT)' : '';
+        enhancedPrompt += `- **${mapping.calendar_name}**${defaultMarker}: Mapped to "${mapping.entity_type}" calendar\n`;
+        if (mapping.calendar_time_zone) {
+          enhancedPrompt += `  - Timezone: ${mapping.calendar_time_zone}\n`;
+        }
+      }
+
+      enhancedPrompt += `\nWhen creating, updating, or deleting events, the system will automatically select the appropriate calendar based on context. `;
+      enhancedPrompt += `You can see which calendar was selected in the tool execution results.`;
+
+      // Find default calendar if exists
+      const defaultMapping = mappings.find(m => m.is_default);
+      if (defaultMapping) {
+        enhancedPrompt += ` The user's default calendar is "${defaultMapping.calendar_name}" (${defaultMapping.entity_type}).`;
+      }
+    } else {
+      enhancedPrompt += `\n\n## User's Calendar Configuration\n`;
+      enhancedPrompt += `The user has not configured any calendar mappings yet. They need to connect their Google Calendar and set up calendar mappings at /calendar-config before using calendar features.`;
+    }
+  } catch (error) {
+    console.error('[buildEnhancedSystemPrompt] Error fetching calendar mappings:', error);
+    // Continue without calendar context if there's an error
+  }
+
+  return enhancedPrompt;
+}
+
+/**
  * Calendar tool definitions for Claude
  * Supports full CRUD operations on Google Calendar
  */
