@@ -6,7 +6,7 @@
 
 import type { APIRoute } from 'astro';
 import { v4 as uuidv4 } from 'uuid';
-import { streamChatCompletionWithTools } from '../../../lib/openai';
+import { streamChatCompletionWithTools, buildEnhancedSystemPrompt } from '../../../lib/openai';
 import {
   createConversation,
   getConversation,
@@ -98,6 +98,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       conversation.messages.push(userMessage);
     }
 
+    // Build enhanced system prompt with date and calendar context
+    const enhancedSystemPrompt = await buildEnhancedSystemPrompt(
+      dbUser.id,
+      conversation.systemPrompt
+    );
+
     // Set up streaming response
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -174,7 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               controller.close();
             },
             conversation.model,
-            conversation.systemPrompt
+            enhancedSystemPrompt
           );
         } catch (error) {
           hasError = true;

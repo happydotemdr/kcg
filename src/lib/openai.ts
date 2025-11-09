@@ -6,7 +6,19 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
 import type { Message } from '../types/chat';
-import { getUpcomingEvents, isCalendarConnected, formatEventsForChat } from './google-calendar';
+import {
+  getUpcomingEvents,
+  isCalendarConnected,
+  formatEventsForChat,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getEvent,
+  type CreateEventParams,
+  type UpdateEventParams,
+} from './google-calendar';
+import { selectCalendar, formatCalendarSelectionMessage } from './calendar-mapper';
+import type { CalendarEntityType } from './db/types';
 
 // Initialize the OpenAI client
 const client = new OpenAI({
@@ -22,16 +34,92 @@ export const DEFAULT_MODEL = 'gpt-4o';
 /**
  * Default system prompt for a helpful AI assistant
  */
-export const DEFAULT_SYSTEM_PROMPT = `You are ChatGPT, a helpful AI assistant created by OpenAI. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided.`;
+export const DEFAULT_SYSTEM_PROMPT = `You are ChatGPT, a helpful AI assistant created by OpenAI. You are knowledgeable, thoughtful, and aim to provide accurate and helpful responses. You can understand and analyze images when they are provided. You have access to functions that allow you to help users with their Google Calendar.`;
 
 /**
- * Google Calendar tool definition for OpenAI function calling
+ * Build an enhanced system prompt with date awareness and calendar mappings
+ * This helps ChatGPT understand:
+ * - What "today", "tomorrow", "next week", etc. mean
+ * - Which calendars the user has configured (family, personal, work)
+ *
+ * @param userId - Database user ID
+ * @param basePrompt - Base system prompt to enhance (defaults to DEFAULT_SYSTEM_PROMPT)
+ * @returns Enhanced system prompt with date and calendar context
  */
-export const CALENDAR_FUNCTION: ChatCompletionTool = {
+export async function buildEnhancedSystemPrompt(
+  userId: string,
+  basePrompt: string = DEFAULT_SYSTEM_PROMPT
+): Promise<string> {
+  // Get current date information
+  const now = new Date();
+  const dateString = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const timeString = now.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZoneName: 'short',
+  });
+
+  let enhancedPrompt = basePrompt;
+
+  // Add date/time context
+  enhancedPrompt += `\n\n## Current Date & Time\n`;
+  enhancedPrompt += `Today is ${dateString} at ${timeString}.\n`;
+  enhancedPrompt += `Use this information when the user mentions relative dates like "today", "tomorrow", "next Monday", "last week", etc.`;
+
+  // Add calendar mappings context
+  try {
+    const { findMappingsByUserId } = await import('./db/repositories/calendar-mappings');
+    const mappings = await findMappingsByUserId(userId);
+
+    if (mappings.length > 0) {
+      enhancedPrompt += `\n\n## User's Calendar Configuration\n`;
+      enhancedPrompt += `The user has configured the following calendars:\n\n`;
+
+      for (const mapping of mappings) {
+        const defaultMarker = mapping.is_default ? ' (DEFAULT)' : '';
+        enhancedPrompt += `- **${mapping.calendar_name}**${defaultMarker}: Mapped to "${mapping.entity_type}" calendar\n`;
+        if (mapping.calendar_time_zone) {
+          enhancedPrompt += `  - Timezone: ${mapping.calendar_time_zone}\n`;
+        }
+      }
+
+      enhancedPrompt += `\nWhen creating, updating, or deleting events, the system will automatically select the appropriate calendar based on context. `;
+      enhancedPrompt += `You can see which calendar was selected in the function execution results.`;
+
+      // Find default calendar if exists
+      const defaultMapping = mappings.find(m => m.is_default);
+      if (defaultMapping) {
+        enhancedPrompt += ` The user's default calendar is "${defaultMapping.calendar_name}" (${defaultMapping.entity_type}).`;
+      }
+    } else {
+      enhancedPrompt += `\n\n## User's Calendar Configuration\n`;
+      enhancedPrompt += `The user has not configured any calendar mappings yet. They need to connect their Google Calendar and set up calendar mappings at /calendar-config before using calendar features.`;
+    }
+  } catch (error) {
+    console.error('[buildEnhancedSystemPrompt] Error fetching calendar mappings:', error);
+    // Continue without calendar context if there's an error
+  }
+
+  return enhancedPrompt;
+}
+
+/**
+ * Calendar function definitions for OpenAI function calling
+ * Supports full CRUD operations on Google Calendar
+ */
+
+// READ: Get upcoming events
+export const GET_CALENDAR_EVENTS_FUNCTION: ChatCompletionTool = {
   type: 'function',
   function: {
     name: 'get_calendar_events',
-    description: 'Retrieves the next 5 upcoming events from the user\'s Google Calendar. Use this when the user asks about their schedule, upcoming events, meetings, or appointments. Only works if the user has connected their Google Calendar.',
+    description: 'Retrieves upcoming events from the user\'s Google Calendar. Use this when the user asks about their schedule, upcoming events, meetings, or appointments. The system will automatically select the appropriate calendar based on context (family, personal, or work).',
     parameters: {
       type: 'object',
       properties: {
@@ -39,52 +127,371 @@ export const CALENDAR_FUNCTION: ChatCompletionTool = {
           type: 'number',
           description: 'Maximum number of events to retrieve (default: 5, max: 10)',
         },
+        entity_type: {
+          type: 'string',
+          enum: ['family', 'personal', 'work'],
+          description: 'Optional: Specific calendar to query. If not provided, will be inferred from context.',
+        },
       },
       required: [],
     },
   },
 };
 
+// CREATE: Add new event
+export const CREATE_CALENDAR_EVENT_FUNCTION: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'create_calendar_event',
+    description: 'Creates a new event on the user\'s Google Calendar. Use this when the user wants to add, schedule, or create an appointment, meeting, or reminder. The system will automatically select the appropriate calendar (family, personal, or work) based on the event context.',
+    parameters: {
+      type: 'object',
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'Event title/summary (required)',
+        },
+        start_datetime: {
+          type: 'string',
+          description: 'Event start date and time in ISO 8601 format (e.g., "2025-11-15T14:00:00-05:00"). For all-day events, use start_date instead.',
+        },
+        start_date: {
+          type: 'string',
+          description: 'For all-day events, the start date in YYYY-MM-DD format (e.g., "2025-11-15")',
+        },
+        end_datetime: {
+          type: 'string',
+          description: 'Event end date and time in ISO 8601 format. For all-day events, use end_date instead.',
+        },
+        end_date: {
+          type: 'string',
+          description: 'For all-day events, the end date in YYYY-MM-DD format',
+        },
+        description: {
+          type: 'string',
+          description: 'Optional event description or notes',
+        },
+        location: {
+          type: 'string',
+          description: 'Optional event location',
+        },
+        attendees: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'Optional array of attendee email addresses',
+        },
+        entity_type: {
+          type: 'string',
+          enum: ['family', 'personal', 'work'],
+          description: 'Optional: Specific calendar to create event on. If not provided, will be inferred from event context (e.g., "dentist" → family, "investor meeting" → work).',
+        },
+      },
+      required: ['summary'],
+    },
+  },
+};
+
+// UPDATE: Modify existing event
+export const UPDATE_CALENDAR_EVENT_FUNCTION: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'update_calendar_event',
+    description: 'Updates an existing event on the user\'s Google Calendar. Use this when the user wants to reschedule, modify, or change details of an existing event. You must first retrieve the event to get its ID.',
+    parameters: {
+      type: 'object',
+      properties: {
+        event_id: {
+          type: 'string',
+          description: 'The Google Calendar event ID to update (required). Get this from get_calendar_events first.',
+        },
+        summary: {
+          type: 'string',
+          description: 'New event title/summary',
+        },
+        start_datetime: {
+          type: 'string',
+          description: 'New start date and time in ISO 8601 format',
+        },
+        start_date: {
+          type: 'string',
+          description: 'New start date for all-day events (YYYY-MM-DD)',
+        },
+        end_datetime: {
+          type: 'string',
+          description: 'New end date and time in ISO 8601 format',
+        },
+        end_date: {
+          type: 'string',
+          description: 'New end date for all-day events (YYYY-MM-DD)',
+        },
+        description: {
+          type: 'string',
+          description: 'New event description',
+        },
+        location: {
+          type: 'string',
+          description: 'New event location',
+        },
+        attendees: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'New list of attendee email addresses',
+        },
+        entity_type: {
+          type: 'string',
+          enum: ['family', 'personal', 'work'],
+          description: 'Optional: Which calendar the event is on. If not provided, will be inferred.',
+        },
+      },
+      required: ['event_id'],
+    },
+  },
+};
+
+// DELETE: Remove event
+export const DELETE_CALENDAR_EVENT_FUNCTION: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'delete_calendar_event',
+    description: 'Deletes an event from the user\'s Google Calendar. Use this when the user wants to cancel, remove, or delete an event. You must first retrieve the event to get its ID. Always confirm the event details with the user before deleting.',
+    parameters: {
+      type: 'object',
+      properties: {
+        event_id: {
+          type: 'string',
+          description: 'The Google Calendar event ID to delete (required). Get this from get_calendar_events first.',
+        },
+        entity_type: {
+          type: 'string',
+          enum: ['family', 'personal', 'work'],
+          description: 'Optional: Which calendar the event is on. If not provided, will be inferred.',
+        },
+      },
+      required: ['event_id'],
+    },
+  },
+};
+
+// All calendar functions
+export const CALENDAR_FUNCTIONS: ChatCompletionTool[] = [
+  GET_CALENDAR_EVENTS_FUNCTION,
+  CREATE_CALENDAR_EVENT_FUNCTION,
+  UPDATE_CALENDAR_EVENT_FUNCTION,
+  DELETE_CALENDAR_EVENT_FUNCTION,
+];
+
+// Legacy export for backwards compatibility
+export const CALENDAR_FUNCTION = GET_CALENDAR_EVENTS_FUNCTION;
+
 /**
- * Execute a function call
+ * Execute a function call with calendar mapping support
+ * Supports full CRUD operations on Google Calendar
  */
 async function executeTool(
   toolName: string,
   toolInput: any,
-  userId: string
+  userId: string,
+  userMessage: string = ''
 ): Promise<{ success: boolean; result?: string; error?: string }> {
-  if (toolName === 'get_calendar_events') {
-    // Check if calendar is connected
+  try {
+    // Check if calendar is connected for all calendar operations
     const connected = await isCalendarConnected(userId);
     if (!connected) {
       return {
         success: false,
-        error: 'Google Calendar is not connected. Please connect your calendar first to view your events.',
+        error: 'Google Calendar is not connected. Please connect your calendar first by clicking the "Connect Calendar" button.',
       };
     }
 
-    try {
-      const maxResults = Math.min(toolInput?.max_results || 5, 10);
+    // READ: Get calendar events
+    if (toolName === 'get_calendar_events') {
+      const maxResults = Math.min(toolInput.max_results || 5, 10);
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Function:get_calendar_events] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Fetch events from selected calendar
       const events = await getUpcomingEvents(userId, maxResults);
       const formattedEvents = formatEventsForChat(events);
 
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
       return {
         success: true,
-        result: formattedEvents,
-      };
-    } catch (error) {
-      console.error('Error executing calendar tool:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to retrieve calendar events',
+        result: `${calendarInfo}\n\n${formattedEvents}`,
       };
     }
-  }
 
-  return {
-    success: false,
-    error: `Unknown tool: ${toolName}`,
-  };
+    // CREATE: Add new event
+    if (toolName === 'create_calendar_event') {
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar based on event context
+      const eventContext = `${toolInput.summary || ''} ${toolInput.description || ''} ${toolInput.location || ''}`;
+      const selection = await selectCalendar(userId, eventContext, entityType);
+      console.log(`[Function:create_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Build event parameters
+      const eventParams: CreateEventParams = {
+        summary: toolInput.summary,
+        description: toolInput.description,
+        location: toolInput.location,
+        start: {},
+        end: {},
+      };
+
+      // Handle start time (datetime or date)
+      if (toolInput.start_datetime) {
+        eventParams.start.dateTime = toolInput.start_datetime;
+      } else if (toolInput.start_date) {
+        eventParams.start.date = toolInput.start_date;
+      } else {
+        return {
+          success: false,
+          error: 'Event must have a start time (start_datetime or start_date)',
+        };
+      }
+
+      // Handle end time (datetime or date)
+      if (toolInput.end_datetime) {
+        eventParams.end.dateTime = toolInput.end_datetime;
+      } else if (toolInput.end_date) {
+        eventParams.end.date = toolInput.end_date;
+      } else {
+        return {
+          success: false,
+          error: 'Event must have an end time (end_datetime or end_date)',
+        };
+      }
+
+      // Add attendees if provided
+      if (toolInput.attendees && Array.isArray(toolInput.attendees)) {
+        eventParams.attendees = toolInput.attendees.map((email: string) => ({ email }));
+      }
+
+      // Create the event
+      const createdEvent = await createEvent(userId, eventParams, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent created successfully:\n\n**${createdEvent.summary}**\n📅 ${createdEvent.start.dateTime || createdEvent.start.date}\n${createdEvent.location ? `📍 ${createdEvent.location}\n` : ''}🔗 ${createdEvent.htmlLink}`,
+      };
+    }
+
+    // UPDATE: Modify existing event
+    if (toolName === 'update_calendar_event') {
+      const eventId = toolInput.event_id;
+      if (!eventId) {
+        return {
+          success: false,
+          error: 'Event ID is required to update an event',
+        };
+      }
+
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Function:update_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Build update parameters
+      const updateParams: UpdateEventParams = {
+        eventId,
+      };
+
+      if (toolInput.summary) updateParams.summary = toolInput.summary;
+      if (toolInput.description) updateParams.description = toolInput.description;
+      if (toolInput.location) updateParams.location = toolInput.location;
+
+      // Handle start time updates
+      if (toolInput.start_datetime || toolInput.start_date) {
+        updateParams.start = {};
+        if (toolInput.start_datetime) {
+          updateParams.start.dateTime = toolInput.start_datetime;
+        } else if (toolInput.start_date) {
+          updateParams.start.date = toolInput.start_date;
+        }
+      }
+
+      // Handle end time updates
+      if (toolInput.end_datetime || toolInput.end_date) {
+        updateParams.end = {};
+        if (toolInput.end_datetime) {
+          updateParams.end.dateTime = toolInput.end_datetime;
+        } else if (toolInput.end_date) {
+          updateParams.end.date = toolInput.end_date;
+        }
+      }
+
+      // Handle attendees updates
+      if (toolInput.attendees && Array.isArray(toolInput.attendees)) {
+        updateParams.attendees = toolInput.attendees.map((email: string) => ({ email }));
+      }
+
+      // Update the event
+      const updatedEvent = await updateEvent(userId, updateParams, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent updated successfully:\n\n**${updatedEvent.summary}**\n📅 ${updatedEvent.start.dateTime || updatedEvent.start.date}\n${updatedEvent.location ? `📍 ${updatedEvent.location}\n` : ''}🔗 ${updatedEvent.htmlLink}`,
+      };
+    }
+
+    // DELETE: Remove event
+    if (toolName === 'delete_calendar_event') {
+      const eventId = toolInput.event_id;
+      if (!eventId) {
+        return {
+          success: false,
+          error: 'Event ID is required to delete an event',
+        };
+      }
+
+      const entityType = toolInput.entity_type as CalendarEntityType | undefined;
+
+      // Select appropriate calendar
+      const selection = await selectCalendar(userId, userMessage, entityType);
+      console.log(`[Function:delete_calendar_event] Selected calendar: ${selection.calendarName} (${selection.entityType})`);
+
+      // Get event details before deleting (for confirmation message)
+      let eventSummary = 'Event';
+      try {
+        const event = await getEvent(userId, eventId, selection.calendarId);
+        eventSummary = event.summary;
+      } catch (error) {
+        // Continue with deletion even if we can't get the event details
+        console.warn('Could not fetch event details before deletion:', error);
+      }
+
+      // Delete the event
+      await deleteEvent(userId, eventId, selection.calendarId);
+      const calendarInfo = formatCalendarSelectionMessage(selection);
+
+      return {
+        success: true,
+        result: `${calendarInfo}\n\nEvent "${eventSummary}" has been deleted successfully.`,
+      };
+    }
+
+    return {
+      success: false,
+      error: `Unknown function: ${toolName}`,
+    };
+  } catch (error) {
+    console.error(`[Function:${toolName}] Error:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
 }
 
 /**
@@ -214,15 +621,23 @@ export async function streamChatCompletionWithTools(
     let fullText = '';
     const MAX_ITERATIONS = 5; // Prevent infinite loops
 
+    // Get the user's latest message for context in calendar selection
+    const userMessage = messages.length > 0 && messages[messages.length - 1].role === 'user'
+      ? messages[messages.length - 1].content
+          .filter(block => block.type === 'text')
+          .map(block => (block as any).text)
+          .join(' ')
+      : '';
+
     // Agentic loop: keep calling the API until no more tools are used
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      // Create streaming request with tools
+      // Create streaming request with all calendar tools (CRUD)
       const stream = await client.chat.completions.create({
         model,
         messages: openaiMessages,
         stream: true,
         max_tokens: 4096,
-        tools: [CALENDAR_FUNCTION],
+        tools: CALENDAR_FUNCTIONS, // Use all CRUD functions
         tool_choice: 'auto', // Let the model decide when to use tools
       });
 
@@ -324,8 +739,8 @@ export async function streamChatCompletionWithTools(
         // Notify UI that tool is being used
         onToolUse(toolCall.name, toolInput);
 
-        // Execute the tool
-        const result = await executeTool(toolCall.name, toolInput, userId);
+        // Execute the tool with user message context for calendar selection
+        const result = await executeTool(toolCall.name, toolInput, userId, userMessage);
 
         // Add tool result to messages
         toolResults.push({
