@@ -1,0 +1,244 @@
+/**
+ * Theme Transitions
+ *
+ * Smooth transitions when switching between light and dark modes.
+ * Only transitions color-related properties to avoid layout shifts.
+ */
+
+/* ============================================
+   SMOOTH COLOR TRANSITIONS
+   ============================================ */
+
+/* Transition all color-related properties */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, text-shadow;
+  transition-duration: var(--transition-base);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Faster transitions for interactive elements */
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[role="link"] {
+  transition-duration: var(--transition-fast);
+}
+
+/* Slower transitions for large surfaces */
+body,
+main,
+section,
+article,
+.card,
+.modal,
+.dialog {
+  transition-duration: var(--transition-slow);
+}
+
+
+/* ============================================
+   EXCEPTIONS (No Transitions)
+   ============================================ */
+
+/* Don't transition these properties (causes layout issues) */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, text-shadow;
+  /* Explicitly NOT transitioning: width, height, margin, padding, transform, opacity */
+}
+
+/* Don't transition images and media */
+img,
+video,
+canvas,
+svg,
+iframe {
+  transition: none !important;
+}
+
+/* Don't transition specific elements that have their own animations */
+.no-theme-transition,
+[data-no-theme-transition],
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  transition: none !important;
+}
+
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+
+/* ============================================
+   THEME-SPECIFIC TRANSITIONS
+   ============================================ */
+
+/* Light mode: smooth and subtle */
+[data-theme="light"] * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode (DOS): slightly snappier for retro feel */
+[data-theme="dark"] * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: calc(var(--transition-base) * 0.8); /* 20% faster */
+}
+
+/* Professional dark mode: smooth like light mode */
+[data-theme="dark-pro"] * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ============================================
+   TRANSITION GROUPS
+   ============================================ */
+
+/* Fast transition group (interactive elements) */
+.transition-fast,
+button:not(.no-theme-transition),
+a:not(.no-theme-transition),
+[role="button"]:not(.no-theme-transition) {
+  transition-duration: var(--transition-fast) !important;
+}
+
+/* Base transition group (most elements) */
+.transition-base {
+  transition-duration: var(--transition-base) !important;
+}
+
+/* Slow transition group (large surfaces) */
+.transition-slow,
+.card,
+.modal,
+.dialog,
+.panel {
+  transition-duration: var(--transition-slow) !important;
+}
+
+
+/* ============================================
+   SPECIAL EFFECTS
+   ============================================ */
+
+/* Fade in/out for theme-sensitive content */
+.theme-fade {
+  opacity: 1;
+  transition: opacity var(--transition-base);
+}
+
+[data-theme-loading] .theme-fade {
+  opacity: 0;
+}
+
+/* Glow effect for dark mode (DOS) */
+[data-theme="dark"] .theme-glow {
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  transition: text-shadow var(--transition-base);
+}
+
+[data-theme="dark"] .theme-glow:hover {
+  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+}
+
+/* No glow in light mode */
+[data-theme="light"] .theme-glow,
+[data-theme="dark-pro"] .theme-glow {
+  text-shadow: none;
+}
+
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Use GPU acceleration for color transitions */
+* {
+  will-change: auto;
+}
+
+/* Only enable will-change during theme transition */
+[data-theme-transitioning] * {
+  will-change: background-color, color, border-color;
+}
+
+/* Disable will-change after transition completes */
+[data-theme-transition-complete] * {
+  will-change: auto;
+}
+
+
+/* ============================================
+   FOCUS RING TRANSITIONS
+   ============================================ */
+
+/* Smooth focus ring transitions */
+*:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 2px;
+  transition: outline-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Focus ring with shadow (for better visibility) */
+*:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+
+/* ============================================
+   SELECTION COLOR TRANSITIONS
+   ============================================ */
+
+/* Light mode selection */
+[data-theme="light"] ::selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Dark mode (DOS) selection - inverted */
+[data-theme="dark"] ::selection {
+  background-color: var(--color-primary);
+  color: var(--color-background);
+}
+
+/* Professional dark mode selection */
+[data-theme="dark-pro"] ::selection {
+  background-color: var(--color-primary);
+  color: var(--color-background);
+}
+
+
+/* ============================================
+   SCROLLBAR TRANSITIONS
+   ============================================ */
+
+/* Smooth scrollbar color transitions */
+*::-webkit-scrollbar-thumb {
+  transition: background-color var(--transition-base);
+}
+
+*::-webkit-scrollbar-track {
+  transition: background-color var(--transition-base);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-color: var(--color-primary) var(--color-surface);
+  transition: scrollbar-color var(--transition-base);
+}

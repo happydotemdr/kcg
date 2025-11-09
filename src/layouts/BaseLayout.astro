@@ -4,6 +4,8 @@ import GoogleAds from '@components/analytics/GoogleAds.astro';
 import MetaPixel from '@components/analytics/MetaPixel.astro';
 import TwitterPixel from '@components/analytics/TwitterPixel.astro';
 import NavigationAuth from '@components/NavigationAuth';
+import { ThemeProvider } from '@lib/theme/ThemeContext';
+import ThemeToggle from '@components/theme/ThemeToggle';
 
 interface Props {
   title?: string;
@@ -27,6 +29,21 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
+
+    <!-- Theme Initialization (MUST be first to prevent flash) -->
+    <script is:inline>
+      (function() {
+        const STORAGE_KEY = 'kcg-theme-preference';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = stored === 'system' || !stored ? systemPreference : stored;
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+
+    <!-- Theme Styles -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
 
     <!-- Primary Meta Tags -->
     <title>{title}</title>
@@ -55,68 +72,47 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <TwitterPixel />
   </head>
   <body>
-    <nav class="main-nav">
-      <div class="nav-container">
-        <a href="/" class="nav-logo">
-          <span class="logo-text">Keep Choosing Good</span>
-        </a>
+    <ThemeProvider client:load>
+      <nav class="main-nav">
+        <div class="nav-container">
+          <a href="/" class="nav-logo">
+            <span class="logo-text">Keep Choosing Good</span>
+          </a>
 
-        <NavigationAuth isInNav={true} client:only="react" />
-      </div>
-    </nav>
+          <div class="nav-actions">
+            <ThemeToggle client:load />
+            <NavigationAuth isInNav={true} client:only="react" />
+          </div>
+        </div>
+      </nav>
 
-    <main class="main-content">
-      <slot />
-    </main>
+      <main class="main-content">
+        <slot />
+      </main>
+    </ThemeProvider>
   </body>
 </html>
 
 <style is:global>
-  :root {
-    /* Color System - Aligned with Tailwind */
-    --color-primary: #4f46e5;
-    --color-primary-dark: #4338ca;
-    --color-primary-light: #818cf8;
-    --color-secondary: #7c3aed;
-    --color-secondary-dark: #6d28d9;
-    --color-text: #1f2937;
-    --color-text-secondary: #4b5563;
-    --color-text-light: #6b7280;
-    --color-background: #ffffff;
-    --color-surface: #f9fafb;
-    --color-border: #e5e7eb;
-
-    /* Spacing System */
-    --spacing-xs: 0.5rem;
-    --spacing-sm: 0.75rem;
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
-    --spacing-2xl: 3rem;
-    --spacing-3xl: 4rem;
-
-    /* Border Radius */
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
+  /* Note: CSS variables are now defined in /src/styles/themes/tokens.css */
 
   * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+  }
+
+  /* Screen reader only (for accessibility) */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 
   html {
@@ -189,6 +185,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-xl);
+    flex-wrap: wrap;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
     flex-wrap: wrap;
   }
 

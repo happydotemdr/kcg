@@ -1,0 +1,322 @@
+/**
+ * Theme Tokens - CSS Custom Properties
+ *
+ * Default theme: Light Mode
+ * Override with [data-theme="dark"] for DOS-inspired dark mode
+ *
+ * Usage:
+ *   background: var(--color-background);
+ *   color: var(--color-text);
+ */
+
+/* ============================================
+   BASE THEME (Light Mode)
+   ============================================ */
+
+:root {
+  /* ==================== Colors ==================== */
+
+  /* Primary Colors */
+  --color-primary: #4f46e5;           /* Indigo - main brand color */
+  --color-primary-dark: #4338ca;      /* Darker indigo for hover */
+  --color-primary-light: #818cf8;     /* Lighter indigo for accents */
+  --color-secondary: #7c3aed;         /* Purple - secondary brand */
+  --color-secondary-dark: #6d28d9;    /* Darker purple */
+
+  /* Text Colors */
+  --color-text: #1f2937;              /* Dark gray - primary text */
+  --color-text-secondary: #4b5563;    /* Medium gray - secondary text */
+  --color-text-light: #6b7280;        /* Light gray - tertiary text */
+
+  /* Background Colors */
+  --color-background: #ffffff;        /* Pure white */
+  --color-surface: #f9fafb;           /* Very light gray - cards/surfaces */
+  --color-surface-hover: #ffffff;     /* White - hover state */
+  --color-border: #e5e7eb;            /* Light gray - borders */
+
+  /* Status Colors */
+  --color-success: #22c55e;           /* Green */
+  --color-success-bg: #dcfce7;        /* Light green background */
+  --color-success-text: #16a34a;      /* Dark green text */
+  --color-warning: #eab308;           /* Yellow */
+  --color-warning-bg: #fef3c7;        /* Light yellow background */
+  --color-error: #ef4444;             /* Red */
+  --color-error-bg: #fee2e2;          /* Light red background */
+  --color-info: #3b82f6;              /* Blue */
+  --color-info-bg: #dbeafe;           /* Light blue background */
+
+  /* ==================== Typography ==================== */
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Font Sizes */
+  --font-size-xs: 0.75rem;            /* 12px */
+  --font-size-sm: 0.875rem;           /* 14px */
+  --font-size-base: 1rem;             /* 16px */
+  --font-size-lg: 1.125rem;           /* 18px */
+  --font-size-xl: 1.25rem;            /* 20px */
+  --font-size-2xl: 1.5rem;            /* 24px */
+  --font-size-3xl: 2rem;              /* 32px */
+  --font-size-4xl: 2.5rem;            /* 40px */
+  --font-size-5xl: 3rem;              /* 48px */
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Line Heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.75;
+
+  /* Letter Spacing */
+  --letter-spacing-tight: -0.03em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+
+  /* ==================== Spacing ==================== */
+
+  --spacing-xs: 0.5rem;               /* 8px */
+  --spacing-sm: 0.75rem;              /* 12px */
+  --spacing-md: 1rem;                 /* 16px */
+  --spacing-lg: 1.5rem;               /* 24px */
+  --spacing-xl: 2rem;                 /* 32px */
+  --spacing-2xl: 3rem;                /* 48px */
+  --spacing-3xl: 4rem;                /* 64px */
+
+  /* ==================== Border Styles ==================== */
+
+  --border-width: 1px;
+  --border-width-thick: 2px;
+  --border-style: solid;
+
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 0.375rem;              /* 6px */
+  --radius-md: 0.5rem;                /* 8px */
+  --radius-lg: 0.75rem;               /* 12px */
+  --radius-xl: 1rem;                  /* 16px */
+  --radius-2xl: 1.5rem;               /* 24px */
+  --radius-full: 9999px;              /* Pill shape */
+
+  /* ==================== Shadows ==================== */
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* ==================== Transitions ==================== */
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ==================== Interactive States ==================== */
+
+  --hover-transform: translateY(-2px);
+  --hover-scale: scale(1.02);
+  --active-transform: translateY(0);
+  --active-scale: scale(0.98);
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  --focus-outline-color: var(--color-primary);
+  --focus-outline-width: 2px;
+
+  /* ==================== Z-Index Scale ==================== */
+
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+}
+
+
+/* ============================================
+   DARK MODE (DOS-Inspired)
+   ============================================ */
+
+[data-theme="dark"] {
+  /* ==================== Colors ==================== */
+
+  /* Primary Colors - DOS Green */
+  --color-primary: #00ff00;           /* Bright green - DOS classic */
+  --color-primary-dark: #00cc00;      /* Slightly darker green */
+  --color-primary-light: #00ff00;     /* Bright green */
+  --color-secondary: #00ff00;         /* Green for consistency */
+  --color-secondary-dark: #00cc00;    /* Darker green */
+
+  /* Text Colors - DOS Green */
+  --color-text: #00ff00;              /* Bright green text */
+  --color-text-secondary: #00ff00;    /* Bright green text */
+  --color-text-light: #00dd00;        /* Slightly dimmer green */
+
+  /* Background Colors - DOS Black */
+  --color-background: #000000;        /* Pure black - DOS screen */
+  --color-surface: #001100;           /* Very dark green tint */
+  --color-surface-hover: #002200;     /* Slightly lighter on hover */
+  --color-border: #00ff00;            /* Green borders */
+
+  /* Status Colors */
+  --color-success: #00ff00;           /* Green (same as primary) */
+  --color-success-bg: rgba(0, 255, 0, 0.1);
+  --color-success-text: #00ff00;
+  --color-warning: #ffff00;           /* Yellow */
+  --color-warning-bg: rgba(255, 255, 0, 0.1);
+  --color-error: #ff0000;             /* Bright red */
+  --color-error-bg: rgba(255, 0, 0, 0.1);
+  --color-info: #00ffff;              /* Cyan */
+  --color-info-bg: rgba(0, 255, 255, 0.1);
+
+  /* ==================== Typography ==================== */
+
+  /* DOS uses monospace everywhere */
+  --font-family-base: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-family-heading: 'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Font weights - DOS style (less variation) */
+  --font-weight-normal: 400;
+  --font-weight-medium: 400;          /* No medium weight in DOS */
+  --font-weight-semibold: 700;        /* Jump to bold */
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 700;       /* Max at bold */
+
+  /* ==================== Border Styles ==================== */
+
+  /* DOS has sharper, more angular borders */
+  --border-width: 1px;
+  --border-width-thick: 2px;
+
+  /* Minimal border radius for DOS aesthetic */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-full: 2px;                 /* No pill shapes in DOS */
+
+  /* ==================== Shadows ==================== */
+
+  /* DOS uses glow effects instead of shadows */
+  --shadow-sm: 0 0 5px rgba(0, 255, 0, 0.3);
+  --shadow-md: 0 0 10px rgba(0, 255, 0, 0.5);
+  --shadow-lg: 0 0 15px rgba(0, 255, 0, 0.6);
+  --shadow-xl: 0 0 20px rgba(0, 255, 0, 0.7);
+  --shadow-2xl: 0 0 30px rgba(0, 255, 0, 0.8);
+
+  /* ==================== Interactive States ==================== */
+
+  /* DOS hover inverts colors */
+  --hover-transform: none;            /* No transform in DOS */
+  --hover-scale: scale(1);            /* No scale in DOS */
+  --active-transform: translateY(1px); /* Subtle press effect */
+  --active-scale: scale(1);
+
+  /* Focus Ring - DOS style */
+  --focus-ring: 0 0 10px rgba(0, 255, 0, 0.5);
+  --focus-outline-color: #00ff00;
+  --focus-outline-width: 2px;
+}
+
+
+/* ============================================
+   PROFESSIONAL DARK MODE (Optional)
+   For pages like Dev Dashboard
+   ============================================ */
+
+[data-theme="dark-pro"] {
+  /* ==================== Colors ==================== */
+
+  /* Primary Colors - Blue/Purple scheme */
+  --color-primary: #60a5fa;           /* Sky blue */
+  --color-primary-dark: #3b82f6;      /* Darker blue */
+  --color-primary-light: #93c5fd;     /* Lighter blue */
+  --color-secondary: #a78bfa;         /* Light purple */
+  --color-secondary-dark: #8b5cf6;    /* Darker purple */
+
+  /* Text Colors */
+  --color-text: #e2e8f0;              /* Light slate */
+  --color-text-secondary: #94a3b8;    /* Medium slate */
+  --color-text-light: #64748b;        /* Darker slate */
+
+  /* Background Colors */
+  --color-background: #0f172a;        /* Dark slate */
+  --color-surface: #1e293b;           /* Lighter slate */
+  --color-surface-hover: #334155;     /* Even lighter on hover */
+  --color-border: #334155;            /* Slate border */
+
+  /* Status Colors */
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.2);
+  --color-success-text: #4ade80;
+  --color-warning: #eab308;
+  --color-warning-bg: rgba(234, 179, 8, 0.2);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.2);
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.2);
+
+  /* ==================== Typography ==================== */
+
+  /* Professional dark uses sans-serif */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* ==================== Shadows ==================== */
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.5);
+
+  /* Border radius - modern but subtle */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+}
+
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme="dark"],
+  [data-theme="dark-pro"] {
+    --transition-fast: 0ms;
+    --transition-base: 0ms;
+    --transition-slow: 0ms;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000000;
+    --border-width: 2px;
+    --border-width-thick: 3px;
+  }
+
+  [data-theme="dark"] {
+    --color-text: #ffffff;
+    --color-background: #000000;
+    --color-border: #ffffff;
+  }
+}
