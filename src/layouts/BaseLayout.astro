@@ -72,7 +72,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <TwitterPixel />
   </head>
   <body>
-    <ThemeProvider client:load>
+    <ThemeProvider client:only="react">
       <nav class="main-nav">
         <div class="nav-container">
           <a href="/" class="nav-logo">
@@ -80,7 +80,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           </a>
 
           <div class="nav-actions">
-            <ThemeToggle client:load />
+            <ThemeToggle client:only="react" />
             <NavigationAuth isInNav={true} client:only="react" />
           </div>
         </div>
