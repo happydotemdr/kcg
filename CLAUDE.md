@@ -42,11 +42,12 @@ This project has been upgraded to the latest versions:
    - **Full CRUD**: Create, Read, Update, Delete calendar events via natural language
    - **Multi-Calendar Support**: Intelligent routing to family, personal, or work calendars
    - **Smart Calendar Selection**: Automatic inference from keywords ("dentist" → family, "investor meeting" → work)
+   - **🎯 NEW: Intelligent Calendar Extraction**: Upload documents/images (schedules, flyers, screenshots) and automatically extract events with duplicate detection and batch creation
    - **Agentic workflow**: Automatic tool execution with streaming feedback
    - **OAuth2 authentication**: Secure access with write permissions
    - **Per-user token storage**: PostgreSQL-backed token management
    - **Configuration UI**: Web interface for mapping calendars to entity types at `/calendar-config`
-   - See [CALENDAR_CRUD_README.md](./CALENDAR_CRUD_README.md) for complete documentation
+   - See [CALENDAR_CRUD_README.md](./CALENDAR_CRUD_README.md) and [CALENDAR_EXTRACTION_README.md](./CALENDAR_EXTRACTION_README.md) for complete documentation
 
 ## Project Structure
 
