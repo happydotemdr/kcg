@@ -95,16 +95,16 @@ const posts = [
   }
 
   .post-card {
-    background: white;
+    background: var(--color-surface);
     padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     transition: transform 0.2s, box-shadow 0.2s;
   }
 
   .post-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xl);
   }
 
   time {

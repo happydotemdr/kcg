@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { SignUp as ClerkSignUp } from '@clerk/astro/react';
+import { ThemeAwareSignUp } from '@components/ThemeAwareClerkWrapper';
 
 export const prerender = false;
 ---
@@ -8,7 +8,7 @@ export const prerender = false;
 <BaseLayout title="Sign Up - Keep Choosing Good">
   <main class="auth-container">
     <div class="auth-wrapper">
-      <ClerkSignUp
+      <ThemeAwareSignUp
         client:load
         appearance={{
           elements: {
@@ -19,17 +19,6 @@ export const prerender = false;
             socialButtonsBlockButton: 'auth-social-button',
             formButtonPrimary: 'auth-primary-button',
             footerActionLink: 'auth-link'
-          },
-          variables: {
-            colorPrimary: '#4f46e5',
-            colorText: '#1f2937',
-            colorTextSecondary: '#6b7280',
-            colorBackground: '#ffffff',
-            colorInputBackground: '#ffffff',
-            colorInputText: '#1f2937',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
-            borderRadius: '0.5rem',
-            fontSize: '1rem'
           }
         }}
       />
@@ -44,7 +33,7 @@ export const prerender = false;
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.03) 0%, rgba(124, 58, 237, 0.03) 100%);
+    background: var(--color-surface);
   }
 
   .auth-wrapper {
@@ -61,7 +50,7 @@ export const prerender = false;
 
   :global(.auth-card) {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--color-border);
   }
 
   :global(.auth-header) {
@@ -89,7 +78,7 @@ export const prerender = false;
 
   :global(.auth-primary-button:hover) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   :global(.auth-link) {

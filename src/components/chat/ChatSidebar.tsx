@@ -87,12 +87,23 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
+    <div className="w-64 flex flex-col h-screen" style={{
+      background: 'var(--color-surface)',
+      borderRight: '1px solid var(--color-border)'
+    }}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <button
           onClick={onNewChat}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full px-4 py-2 font-medium flex items-center justify-center gap-2"
+          style={{
+            background: 'var(--color-primary)',
+            color: 'var(--color-background)',
+            borderRadius: 'var(--radius-lg)',
+            transition: 'all var(--transition-base)'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
         >
           <svg
             className="w-5 h-5"
@@ -114,19 +125,19 @@ export default function ChatSidebar({
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
         {loading && (
-          <div className="p-4 text-center text-gray-400">
+          <div className="p-4 text-center" style={{ color: 'var(--color-text-light)' }}>
             Loading conversations...
           </div>
         )}
 
         {error && (
-          <div className="p-4 text-center text-red-400">
+          <div className="p-4 text-center" style={{ color: 'var(--color-error)' }}>
             {error}
           </div>
         )}
 
         {!loading && !error && conversations.length === 0 && (
-          <div className="p-4 text-center text-gray-400">
+          <div className="p-4 text-center" style={{ color: 'var(--color-text-light)' }}>
             No conversations yet
           </div>
         )}
@@ -137,20 +148,32 @@ export default function ChatSidebar({
               <div
                 key={conv.id}
                 onClick={() => onSelectConversation(conv.id)}
-                className={`px-4 py-3 cursor-pointer hover:bg-gray-800 transition-colors group relative ${
-                  currentConversationId === conv.id ? 'bg-gray-800' : ''
-                }`}
+                className="px-4 py-3 cursor-pointer group relative"
+                style={{
+                  background: currentConversationId === conv.id ? 'var(--color-surface-hover)' : 'transparent',
+                  transition: 'background var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentConversationId !== conv.id) {
+                    e.currentTarget.style.background = 'var(--color-surface-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentConversationId !== conv.id) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
               >
                 <div className="pr-8">
-                  <div className="font-medium text-sm truncate">
+                  <div className="font-medium text-sm truncate" style={{ color: 'var(--color-text)' }}>
                     {conv.title}
                   </div>
                   {conv.lastMessage && (
-                    <div className="text-xs text-gray-400 truncate mt-1">
+                    <div className="text-xs truncate mt-1" style={{ color: 'var(--color-text-light)' }}>
                       {conv.lastMessage}
                     </div>
                   )}
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
                     {formatDate(conv.updatedAt)}
                   </div>
                 </div>
@@ -158,7 +181,13 @@ export default function ChatSidebar({
                 {/* Delete Button */}
                 <button
                   onClick={(e) => handleDelete(conv.id, e)}
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-400"
+                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100"
+                  style={{
+                    color: 'var(--color-text-light)',
+                    transition: 'all var(--transition-base)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-error)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-light)'}
                   title="Delete conversation"
                 >
                   <svg
@@ -182,9 +211,15 @@ export default function ChatSidebar({
       </div>
 
       {/* Footer Info */}
-      <div className="p-4 border-t border-gray-700 text-xs text-gray-400">
+      <div className="p-4 text-xs" style={{
+        borderTop: '1px solid var(--color-border)',
+        color: 'var(--color-text-secondary)'
+      }}>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 animate-pulse" style={{
+            background: 'var(--color-success)',
+            borderRadius: 'var(--radius-full)'
+          }}></div>
           <span>Powered by Claude AI</span>
         </div>
       </div>

@@ -115,7 +115,10 @@ export default function ChatInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 bg-white">
+    <form onSubmit={handleSubmit} style={{
+      borderTop: '1px solid var(--color-border)',
+      background: 'var(--color-background)'
+    }}>
       {/* Image Previews */}
       {images.length > 0 && (
         <div className="p-3 flex gap-2 overflow-x-auto">
@@ -124,12 +127,24 @@ export default function ChatInput({
               <img
                 src={img.preview}
                 alt={img.name}
-                className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                className="h-20 w-20 object-cover"
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-border)'
+                }}
               />
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs"
+                style={{
+                  background: 'var(--color-error)',
+                  color: 'var(--color-background)',
+                  borderRadius: 'var(--radius-full)',
+                  transition: 'opacity var(--transition-fast)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
               >
                 ×
               </button>
@@ -145,7 +160,22 @@ export default function ChatInput({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-shrink-0 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            color: 'var(--color-text-secondary)',
+            borderRadius: 'var(--radius-lg)',
+            transition: 'all var(--transition-base)'
+          }}
+          onMouseEnter={(e) => {
+            if (!disabled) {
+              e.currentTarget.style.color = 'var(--color-text)';
+              e.currentTarget.style.background = 'var(--color-surface)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--color-text-secondary)';
+            e.currentTarget.style.background = 'transparent';
+          }}
           title="Attach images"
         >
           <svg
@@ -184,14 +214,46 @@ export default function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="flex-1 resize-none px-4 py-2 focus:outline-none disabled:cursor-not-allowed"
+          style={{
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            background: disabled ? 'var(--color-surface)' : 'var(--color-background)',
+            color: 'var(--color-text)',
+            boxShadow: 'none',
+            transition: 'all var(--transition-base)'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.outline = `${
+              getComputedStyle(document.documentElement).getPropertyValue('--focus-outline-width')
+            } solid var(--focus-outline-color)`;
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.outline = 'none';
+            e.currentTarget.style.borderColor = 'var(--color-border)';
+          }}
         />
 
         {/* Send Button */}
         <button
           type="submit"
           disabled={disabled || (!message.trim() && images.length === 0)}
-          className="flex-shrink-0 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="flex-shrink-0 px-4 py-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            background: 'var(--color-primary)',
+            color: 'var(--color-background)',
+            borderRadius: 'var(--radius-lg)',
+            transition: 'all var(--transition-base)'
+          }}
+          onMouseEnter={(e) => {
+            if (!disabled && !(!message.trim() && images.length === 0)) {
+              e.currentTarget.style.background = 'var(--color-primary-dark)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'var(--color-primary)';
+          }}
         >
           Send
         </button>

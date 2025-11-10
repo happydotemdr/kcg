@@ -22,6 +22,11 @@ if (!userId) {
 <style is:global>
   /* Override base layout styles for dev dashboard */
   body {
-    background: #0f172a;
+    background: var(--color-background, #0f172a);
+  }
+
+  /* Light mode override */
+  [data-theme="light"] body {
+    background: #f8fafc;
   }
 </style>

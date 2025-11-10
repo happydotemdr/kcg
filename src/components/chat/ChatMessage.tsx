@@ -15,18 +15,22 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
   return (
     <div
-      className={`flex gap-4 p-4 ${
-        isAssistant ? 'bg-gray-50' : 'bg-white'
-      }`}
+      className="flex gap-4 p-4"
+      style={{
+        background: isAssistant ? 'var(--color-surface)' : 'var(--color-background)'
+      }}
     >
       {/* Avatar */}
       <div className="flex-shrink-0">
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-            isAssistant
-              ? 'bg-gradient-to-br from-purple-500 to-blue-500'
-              : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-          }`}
+          className="w-8 h-8 flex items-center justify-center text-sm font-medium"
+          style={{
+            borderRadius: 'var(--radius-full)',
+            background: isAssistant
+              ? 'linear-gradient(135deg, var(--color-secondary), var(--color-primary))'
+              : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
+            color: 'var(--color-background)'
+          }}
         >
           {isAssistant ? 'AI' : 'U'}
         </div>
@@ -34,7 +38,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       {/* Content */}
       <div className="flex-1 space-y-3">
-        <div className="font-medium text-sm text-gray-700">
+        <div className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
           {isAssistant ? 'Claude' : 'You'}
         </div>
 
@@ -43,7 +47,8 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             return (
               <div
                 key={idx}
-                className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap"
+                className="prose prose-sm max-w-none whitespace-pre-wrap"
+                style={{ color: 'var(--color-text)' }}
               >
                 {block.text}
               </div>
@@ -54,7 +59,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 <img
                   src={`data:${block.source.media_type};base64,${block.source.data}`}
                   alt="Uploaded image"
-                  className="rounded-lg border border-gray-200 shadow-sm"
+                  style={{
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
                 />
               </div>
             );
@@ -63,7 +72,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         })}
 
         {/* Timestamp */}
-        <div className="text-xs text-gray-400">
+        <div className="text-xs" style={{ color: 'var(--color-text-light)' }}>
           {new Date(message.timestamp).toLocaleTimeString()}
         </div>
       </div>
