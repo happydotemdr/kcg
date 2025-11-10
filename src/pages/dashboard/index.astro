@@ -1,5 +1,6 @@
 ---
 import AppHeader from '@components/AppHeader';
+import ThemeProvider from '@lib/theme/ThemeContext';
 import { findUserByClerkId } from '@lib/db/repositories/users';
 
 export const prerender = false;
@@ -45,15 +46,16 @@ const email = dbUser?.email || '';
     <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
   </head>
   <body>
-    <div class="dashboard">
-      <!-- Unified Header -->
-      <AppHeader theme="modern" currentPage="dashboard" client:only="react" />
+    <ThemeProvider client:load>
+      <div class="dashboard">
+        <!-- Unified Header -->
+        <AppHeader theme="modern" currentPage="dashboard" client:only="react" />
 
-      <!-- Welcome Section -->
-      <div class="welcome-section">
-        <h1 class="welcome-title">Welcome back, {firstName}!</h1>
-        <p class="welcome-subtitle">Here's what's happening with your account today.</p>
-      </div>
+        <!-- Welcome Section -->
+        <div class="welcome-section">
+          <h1 class="welcome-title">Welcome back, {firstName}!</h1>
+          <p class="welcome-subtitle">Here's what's happening with your account today.</p>
+        </div>
 
       <!-- Main Content -->
       <main class="dashboard-content">
@@ -211,7 +213,8 @@ const email = dbUser?.email || '';
         </section>
       </div>
     </main>
-  </div>
+      </div>
+    </ThemeProvider>
   </body>
 </html>
 

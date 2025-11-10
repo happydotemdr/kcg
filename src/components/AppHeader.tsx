@@ -6,6 +6,8 @@
 
 import React from 'react';
 import { UserButton } from '@clerk/astro/react';
+import ThemeToggle from './theme/ThemeToggle';
+import DosThemeToggle from './theme/DosThemeToggle';
 
 interface AppHeaderProps {
   theme?: 'modern' | 'dos';
@@ -90,8 +92,9 @@ export default function AppHeader({ theme = 'modern', currentPage = 'other' }: A
           ))}
         </nav>
 
-        {/* User Button */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        {/* Theme Toggle and User Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <DosThemeToggle />
           <UserButton
             appearance={{
               variables: {
@@ -176,8 +179,9 @@ export default function AppHeader({ theme = 'modern', currentPage = 'other' }: A
         ))}
       </nav>
 
-      {/* User Button */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      {/* Theme Toggle and User Button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <ThemeToggle />
         <UserButton
           appearance={{
             variables: {
