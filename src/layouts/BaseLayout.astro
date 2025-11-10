@@ -4,7 +4,6 @@ import GoogleAds from '@components/analytics/GoogleAds.astro';
 import MetaPixel from '@components/analytics/MetaPixel.astro';
 import TwitterPixel from '@components/analytics/TwitterPixel.astro';
 import NavigationAuth from '@components/NavigationAuth';
-import ThemeToggle from '@components/theme/ThemeToggle';
 
 interface Props {
   title?: string;
@@ -29,26 +28,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
 
-    <!-- Theme Initialization (MUST be first to prevent flash) -->
-    <script is:inline>
-      (function() {
-        const STORAGE_KEY = 'kcg-theme-preference';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = stored === 'system' || !stored ? systemPreference : stored;
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
-
-    <!-- Initialize theme store -->
-    <script>
-      import { initializeTheme } from '@lib/theme/themeStore';
-      initializeTheme();
-    </script>
-
-    <!-- Theme Styles -->
+    <!-- Theme Tokens -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
-    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
 
     <!-- Primary Meta Tags -->
     <title>{title}</title>
@@ -84,7 +65,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         </a>
 
         <div class="nav-actions">
-          <ThemeToggle client:only="react" />
           <NavigationAuth isInNav={true} client:only="react" />
         </div>
       </div>

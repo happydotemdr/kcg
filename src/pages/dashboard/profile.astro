@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { ThemeAwareUserProfile } from '@components/ThemeAwareClerkWrapper';
+import { UserProfile } from '@clerk/astro/components';
 
 export const prerender = false;
 
@@ -16,7 +16,7 @@ if (!userId) {
 
 <BaseLayout title="Profile - Keep Choosing Good">
   <div class="profile-container">
-    <ThemeAwareUserProfile client:load />
+    <UserProfile />
   </div>
 </BaseLayout>
 

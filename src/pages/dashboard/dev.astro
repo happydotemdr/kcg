@@ -18,15 +18,3 @@ if (!userId) {
 <BaseLayout title="Developer Dashboard - Keep Choosing Good" description="System information and troubleshooting tools">
   <DevDashboard client:load />
 </BaseLayout>
-
-<style is:global>
-  /* Override base layout styles for dev dashboard */
-  body {
-    background: var(--color-background, #0f172a);
-  }
-
-  /* Light mode override */
-  [data-theme="light"] body {
-    background: #f8fafc;
-  }
-</style>

@@ -1,26 +1,17 @@
 /**
  * Unified App Header Component
  * Consistent navigation across all authenticated pages
- * Globally responsive to light/dark theme:
- * - Light mode: Modern clean UI everywhere
- * - Dark mode: DOS terminal aesthetic everywhere
+ * Clean, modern light UI with Tailwind utilities
  */
 
 import React from 'react';
 import { UserButton } from '@clerk/astro/react';
-import { useStore } from '@nanostores/react';
-import { resolvedThemeAtom } from '@lib/theme/themeStore';
-import ThemeToggle from './theme/ThemeToggle';
-import styles from './AppHeader.module.css';
 
 interface AppHeaderProps {
   currentPage?: 'dashboard' | 'chat' | 'chatgpt' | 'calendar' | 'other';
 }
 
 export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
-  const resolvedTheme = useStore(resolvedThemeAtom);
-  const isDarkMode = resolvedTheme === 'dark';
-
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
     { href: '/chat', label: 'Claude Chat', key: 'chat' },
@@ -28,49 +19,46 @@ export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
     { href: '/calendar-config', label: 'Calendar', key: 'calendar' },
   ];
 
-  // Clerk UserButton theme configuration
-  const clerkTheme = isDarkMode ? {
-    colorPrimary: '#00ff00',
-    colorText: '#00ff00',
-    borderRadius: '2px',
-    colorBackground: '#000000',
-    colorInputBackground: '#001100',
-    colorInputText: '#00ff00',
-    fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
-  } : {
-    colorPrimary: '#4f46e5',
-    colorText: '#1f2937',
-    borderRadius: '0.5rem',
-  };
-
   return (
-    <header className={styles.header}>
-      {/* Logo */}
-      <a href="/" className={styles.logo}>
-        {isDarkMode ? '[KCG.SYS]' : 'Keep Choosing Good'}
-      </a>
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200 px-6 py-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        {/* Logo */}
+        <a
+          href="/"
+          className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+        >
+          Keep Choosing Good
+        </a>
 
-      {/* Nav Links */}
-      <nav className={styles.nav}>
-        {navItems.map(item => (
-          <a
-            key={item.key}
-            href={item.href}
-            className={`${styles.navLink} ${currentPage === item.key ? styles.active : ''}`}
-          >
-            {isDarkMode ? item.label.toUpperCase() : item.label}
-          </a>
-        ))}
-      </nav>
+        {/* Nav Links */}
+        <nav className="flex items-center gap-6">
+          {navItems.map(item => (
+            <a
+              key={item.key}
+              href={item.href}
+              className={`text-sm font-medium transition-colors pb-1 ${
+                currentPage === item.key
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-600 hover:text-indigo-600'
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
 
-      {/* Theme Toggle and User Button */}
-      <div className={styles.userControls}>
-        <ThemeToggle />
-        <UserButton
-          appearance={{
-            variables: clerkTheme
-          }}
-        />
+        {/* User Button */}
+        <div className="flex items-center">
+          <UserButton
+            appearance={{
+              variables: {
+                colorPrimary: '#4f46e5',
+                colorText: '#1f2937',
+                borderRadius: '0.5rem',
+              }
+            }}
+          />
+        </div>
       </div>
     </header>
   );

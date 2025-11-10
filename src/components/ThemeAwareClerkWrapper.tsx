@@ -1,5 +1,5 @@
 import { SignIn, SignUp, UserProfile } from '@clerk/astro/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface ClerkTheme {
   colorPrimary: string;
@@ -12,37 +12,16 @@ interface ClerkTheme {
 
 /**
  * Hook to read CSS variables and convert them to Clerk theme colors.
- * Re-reads values when theme changes by listening to storage events.
+ * Reads static light theme variables once on mount.
  */
 function useClerkTheme(): ClerkTheme {
-  const [theme, setTheme] = useState<ClerkTheme>(() => getThemeColors());
-
-  useEffect(() => {
-    // Update theme when CSS variables change
-    const updateTheme = () => {
-      setTheme(getThemeColors());
-    };
-
-    // Listen for theme changes via storage event (from ThemeToggle component)
-    window.addEventListener('storage', updateTheme);
-
-    // Also listen for custom theme change event
-    window.addEventListener('themechange', updateTheme);
-
-    // Check theme on mount in case it changed before component loaded
-    updateTheme();
-
-    return () => {
-      window.removeEventListener('storage', updateTheme);
-      window.removeEventListener('themechange', updateTheme);
-    };
-  }, []);
-
+  const [theme] = useState<ClerkTheme>(() => getThemeColors());
   return theme;
 }
 
 /**
- * Reads CSS variables from the document and returns Clerk-compatible colors
+ * Reads CSS variables from the document and returns Clerk-compatible colors.
+ * Light theme only - static configuration.
  */
 function getThemeColors(): ClerkTheme {
   if (typeof window === 'undefined') {
@@ -66,16 +45,10 @@ function getThemeColors(): ClerkTheme {
   const colorBackground = styles.getPropertyValue('--color-background').trim();
   const colorSurface = styles.getPropertyValue('--color-surface').trim();
 
-  // Derive secondary text color (lighter version of text color)
-  // In dark mode (green text), use a slightly dimmer green
-  // In light mode (gray text), use a lighter gray
-  const isDarkMode = colorText.startsWith('#00');
-  const colorTextSecondary = isDarkMode ? '#00cc00' : '#6b7280';
-
   return {
     colorPrimary,
     colorText,
-    colorTextSecondary,
+    colorTextSecondary: '#6b7280',
     colorBackground,
     colorInputBackground: colorSurface || colorBackground,
     colorInputText: colorText,

@@ -1,7 +1,6 @@
 ---
 /**
- * ChatGPT Page - DOS Terminal Theme
- * Modern twist on classic DOS command-line interface
+ * ChatGPT Page
  *
  * Note: This page is protected by Clerk middleware.
  * Unauthenticated users are automatically redirected to /sign-in
@@ -10,8 +9,8 @@ import DosChat from '../components/gpt/DosChat';
 
 export const prerender = false;
 
-const title = 'ChatGPT - DOS Terminal';
-const description = 'ChatGPT with a retro DOS command-line interface';
+const title = 'ChatGPT';
+const description = 'ChatGPT chat interface';
 ---
 
 <!DOCTYPE html>
@@ -22,27 +21,8 @@ const description = 'ChatGPT with a retro DOS command-line interface';
     <meta name="description" content={description} />
     <title>{title}</title>
 
-    <!-- Theme Initialization (MUST be first to prevent flash) -->
-    <script is:inline>
-      (function() {
-        const STORAGE_KEY = 'kcg-theme-preference';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = stored === 'system' || !stored ? systemPreference : stored;
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
-
-    <!-- Theme Styles -->
+    <!-- Token Styles -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
-    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
-    <link rel="stylesheet" href="/src/styles/themes/dos-theme.css" />
-
-    <!-- Initialize theme store -->
-    <script>
-      import { initializeTheme } from '@lib/theme/themeStore';
-      initializeTheme();
-    </script>
   </head>
   <body class="m-0 p-0 overflow-hidden">
     <DosChat client:only="react" />

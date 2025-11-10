@@ -29,26 +29,8 @@ const email = dbUser?.email || '';
     <title>Dashboard - Keep Choosing Good</title>
     <meta name="description" content="Your personal dashboard" />
 
-    <!-- Theme Initialization (MUST be first to prevent flash) -->
-    <script is:inline>
-      (function() {
-        const STORAGE_KEY = 'kcg-theme-preference';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = stored === 'system' || !stored ? systemPreference : stored;
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
-
     <!-- Theme Styles -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
-    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
-
-    <!-- Initialize theme store -->
-    <script>
-      import { initializeTheme } from '@lib/theme/themeStore';
-      initializeTheme();
-    </script>
   </head>
   <body>
     <div class="dashboard">
