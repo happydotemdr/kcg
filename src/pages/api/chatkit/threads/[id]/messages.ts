@@ -80,11 +80,11 @@ function messageToThreadItem(message: Message, threadId: string): UserMessageIte
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   try {
-    // Check authentication
-    const { userId: clerkUserId } = locals.auth();
+    // Check authentication (Clerk v2 pattern)
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
     console.log('[ChatKit:POST /threads/:id/messages] Clerk User ID:', clerkUserId);
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       console.error('[ChatKit:POST /threads/:id/messages] Unauthorized');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),

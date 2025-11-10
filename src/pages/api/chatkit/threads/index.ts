@@ -38,11 +38,11 @@ function conversationToThread(conversation: Conversation): Thread {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    // Check authentication
-    const { userId: clerkUserId } = locals.auth();
+    // Check authentication (Clerk v2 pattern)
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
     console.log('[ChatKit:POST /threads] Clerk User ID:', clerkUserId);
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       console.error('[ChatKit:POST /threads] Unauthorized');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),

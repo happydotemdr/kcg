@@ -89,10 +89,10 @@ function conversationToThread(conversation: Conversation): Thread {
  */
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
-    const { userId: clerkUserId } = locals.auth();
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
     console.log('[ChatKit:GET /threads/:id] Clerk User ID:', clerkUserId);
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       console.error('[ChatKit:GET /threads/:id] Unauthorized');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -147,10 +147,10 @@ export const GET: APIRoute = async ({ params, locals }) => {
  */
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
-    const { userId: clerkUserId } = locals.auth();
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
     console.log('[ChatKit:DELETE /threads/:id] Clerk User ID:', clerkUserId);
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       console.error('[ChatKit:DELETE /threads/:id] Unauthorized');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),

@@ -44,9 +44,9 @@ function cleanupOldApprovals() {
  */
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
-    const { userId: clerkUserId } = locals.auth();
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -95,9 +95,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { userId: clerkUserId } = locals.auth();
+    const { userId: clerkUserId, isAuthenticated } = locals.auth();
 
-    if (!clerkUserId) {
+    if (!isAuthenticated || !clerkUserId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
