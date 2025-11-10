@@ -257,26 +257,29 @@ export default function Chat() {
       setShowUploadZone(false);
 
       for (const file of files) {
-        // Create form data
-        const formData = new FormData();
-        formData.append('file', file);
-
         // Track upload status
         const tempId = `${file.name}-${Date.now()}`;
         setUploadingDocuments((prev) => new Map(prev).set(tempId, 'uploading'));
 
-        // Upload file
-        const response = await fetch('/api/documents/upload', {
+        // Convert file to base64 (keep in memory for Claude)
+        const arrayBuffer = await file.arrayBuffer();
+        const base64Data = btoa(
+          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        // Upload to database for history/tracking (parallel operation)
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/api/documents/upload', {
           method: 'POST',
           body: formData,
+        }).then(() => {
+          // Trigger document history refresh when upload completes
+          setDocumentRefreshTrigger((prev) => prev + 1);
+        }).catch((err) => {
+          console.error('Failed to save document to database:', err);
         });
-
-        if (!response.ok) {
-          throw new Error('Failed to upload document');
-        }
-
-        // Parse response (document ID available for tracking)
-        await response.json();
 
         // Update status to uploaded
         setUploadingDocuments((prev) => {
@@ -285,45 +288,57 @@ export default function Chat() {
           return newMap;
         });
 
-        // Simulate processing stages (in real implementation, this would be driven by backend)
+        // Update to extracting status
+        setUploadingDocuments((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(tempId, 'extracting');
+          return newMap;
+        });
+
+        // Check if file is an image (Claude vision API supports images)
+        const isImage = file.type.startsWith('image/');
+
+        if (!isImage) {
+          // For non-images (PDF, DOCX), show error for now
+          // TODO: Implement PDF/document text extraction
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+          setError(`${file.name}: Only image files are supported for now. PDF/DOCX support coming soon.`);
+          continue;
+        }
+
+        // Validate image type for Claude's vision API
+        const supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!supportedImageTypes.includes(file.type)) {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+          setError(`${file.name}: Unsupported image format. Please use JPEG, PNG, GIF, or WebP.`);
+          continue;
+        }
+
+        // Send document directly to Claude with the message
+        const message = `I've uploaded "${file.name}". Please analyze this document and extract any calendar events you find. Look for dates, times, event names, locations, and recurring patterns. Present the events in a clear format and ask if I'd like to add them to my calendar.`;
+
+        // Send to Claude with the image data
+        await handleSendMessage(message, [{
+          data: base64Data,
+          mediaType: file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        }]);
+
+        // Remove from uploading list after Claude starts processing
         setTimeout(() => {
           setUploadingDocuments((prev) => {
             const newMap = new Map(prev);
-            newMap.set(tempId, 'extracting');
+            newMap.delete(tempId);
             return newMap;
           });
-        }, 500);
-
-        setTimeout(() => {
-          setUploadingDocuments((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(tempId, 'checking');
-            return newMap;
-          });
-        }, 1500);
-
-        setTimeout(() => {
-          setUploadingDocuments((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(tempId, 'complete');
-            return newMap;
-          });
-
-          // Remove from uploading list after completion
-          setTimeout(() => {
-            setUploadingDocuments((prev) => {
-              const newMap = new Map(prev);
-              newMap.delete(tempId);
-              return newMap;
-            });
-            // Trigger document history refresh
-            setDocumentRefreshTrigger((prev) => prev + 1);
-          }, 2000);
-        }, 2500);
-
-        // Send message to Claude to process the document
-        const message = `I've uploaded "${file.name}". Please extract any calendar events from this document.`;
-        await handleSendMessage(message, []);
+        }, 1000);
       }
     } catch (err) {
       console.error('Document upload error:', err);
