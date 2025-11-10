@@ -1,19 +1,17 @@
 /**
- * DOS-Themed ChatGPT Component with ChatKit Integration
- * Retro command-line interface aesthetic
+ * Modern ChatGPT Component with ChatKit Integration
+ * Clean, modern interface matching Claude chat aesthetic
  */
 
 import React, { useState, useEffect } from 'react';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
-import DosInput from './DosInput';
 import DosSidebar from './DosSidebar';
 import AppHeader from '../AppHeader';
-import DosLoadingIndicator, { type LoadingState } from './DosLoadingIndicator';
+import DosLoadingIndicator from './DosLoadingIndicator';
 import ToolApprovalModal from './ToolApprovalModal';
 
 export default function DosChat() {
   const [error, setError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [tokenExpiresAt, setTokenExpiresAt] = useState<string | null>(null);
@@ -37,7 +35,7 @@ export default function DosChat() {
   // Initialize ChatKit
   const { control, setThreadId, sendUserMessage } = useChatKit({
     api: {
-      async getClientSecret(existingSecret?: string) {
+      async getClientSecret(existingSecret: string | null) {
         try {
           // If we have an existing secret, try to refresh it
           if (existingSecret) {
@@ -82,7 +80,29 @@ export default function DosChat() {
           throw err;
         }
       },
-      url: '/api/chatkit/backend',
+      // ✅ ChatKit API base URL - ChatKit will append paths like /backend for message handling
+      url: '/api/chatkit',
+    },
+
+    // ✅ Composer configuration - explicitly enable with custom settings
+    composer: {
+      placeholder: 'Type your message...',
+      attachments: {
+        enabled: true,
+        accept: {
+          'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+        },
+      },
+    },
+
+    // ✅ Explicitly enable history (threads list)
+    history: {
+      enabled: false, // We have custom sidebar, so disable built-in
+    },
+
+    // ✅ Explicitly disable header (we have custom AppHeader)
+    header: {
+      enabled: false,
     },
 
     // Event Handlers
@@ -123,10 +143,10 @@ export default function DosChat() {
 
       // Handle tool approval requests from SSE stream
       if (event.name === 'tool_approval_requested' || event.data?.type === 'tool_approval_requested') {
-        const data = event.data || event;
+        const data = (event.data || event) as any;
         setPendingApproval({
-          approvalId: data.approval_id,
-          toolName: data.tool_name,
+          approvalId: data.approval_id || '',
+          toolName: data.tool_name || '',
           toolArguments: data.tool_arguments || {},
           timeoutMs: data.timeout_ms || 30000,
         });
@@ -134,8 +154,9 @@ export default function DosChat() {
 
       // Track tool execution progress
       if (event.name === 'progress' || event.name === 'tool.execute') {
-        const toolName = event.data?.tool_name || event.data?.toolName || 'unknown';
-        const status = event.data?.status || 'EXECUTING';
+        const data = event.data as any;
+        const toolName = data?.tool_name || data?.toolName || 'unknown';
+        const status = data?.status || 'EXECUTING';
         setCurrentToolExecution({ toolName, status });
       }
 
@@ -186,12 +207,6 @@ export default function DosChat() {
     },
   });
 
-  // Update time every second
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // Monitor token expiry and show warning when approaching expiration
   useEffect(() => {
     if (!tokenExpiresAt) return;
@@ -225,7 +240,8 @@ export default function DosChat() {
   const handleApprove = async (approvalId: string) => {
     console.log('[DosChat] Approving tool:', approvalId);
     try {
-      const response = await fetch('/api/chatkit/approve', {
+      // ✅ FIXED: Use ChatKit protocol actions endpoint
+      const response = await fetch(`/api/chatkit/threads/${currentThreadId}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_id: approvalId, approved: true }),
@@ -247,7 +263,8 @@ export default function DosChat() {
   const handleReject = async (approvalId: string) => {
     console.log('[DosChat] Rejecting tool:', approvalId);
     try {
-      const response = await fetch('/api/chatkit/approve', {
+      // ✅ FIXED: Use ChatKit protocol actions endpoint
+      const response = await fetch(`/api/chatkit/threads/${currentThreadId}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_id: approvalId, approved: false }),
@@ -337,38 +354,28 @@ export default function DosChat() {
     }
   };
 
-  // Handle sending message via ChatKit
-  const handleSendMessage = (
-    message: string,
-    images: { data: string; mediaType: string }[]
-  ) => {
-    sendUserMessage({
-      text: message,
-      attachments: images.map((img, idx) => ({
-        type: 'image' as const,
-        id: `img-${Date.now()}-${idx}`,
-        preview_url: `data:${img.mediaType};base64,${img.data}`,
-        name: `image-${idx}.jpg`,
-        mime_type: img.mediaType,
-      })),
-    });
-  };
+  // ✅ REMOVED: handleSendMessage - ChatKit composer handles this automatically
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+  // ✅ DEBUG: Log control object to see if composer is configured
+  useEffect(() => {
+    console.log('[DosChat] ChatKit control object:', control);
+    console.log('[DosChat] Composer config:', {
+      placeholder: 'Type your message...',
+      attachments: {
+        enabled: true,
+        accept: {
+          'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+        },
+      },
     });
-  };
+  }, [control]);
 
   return (
-    <div className="dos-container flex h-screen bg-black relative overflow-hidden flex-col">
-      {/* Unified DOS Header */}
-      <AppHeader theme="dos" currentPage="chatgpt" />
-
-      {/* CRT Scanlines Effect */}
-      <div className="dos-scanlines pointer-events-none"></div>
+    <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
+      {/* Unified Header */}
+      <div style={{ flexShrink: 0 }}>
+        <AppHeader currentPage="chatgpt" />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
@@ -380,63 +387,85 @@ export default function DosChat() {
         />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col relative">
-          {/* Session Info Bar */}
-          <div className="border-b-2 border-green-500 p-2 font-mono bg-black">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-green-400 text-sm">
-                  ┌─ SESSION: {currentThreadId ? 'ACTIVE' : 'NEW'} ─┐
-                </span>
-                <span className="text-green-400 text-xs">[{formatTime(currentTime)}]</span>
-                {tokenWarning && (
-                  <span className="text-yellow-400 text-xs animate-pulse">
-                    [⚠ TOKEN EXPIRING SOON]
-                  </span>
-                )}
-              </div>
-              {/* Calendar Connection Status */}
-              <div className="flex items-center gap-2">
-                {calendarConnected ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Conversation Info Bar */}
+          <div className="px-6 py-3 flex items-center justify-between" style={{
+            background: 'var(--color-background)',
+            borderBottom: '1px solid var(--color-border)'
+          }}>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+                {currentThreadId ? 'Conversation' : 'New Conversation'}
+              </h2>
+              {tokenWarning && (
+                <p className="text-xs animate-pulse" style={{ color: 'var(--color-warning)' }}>
+                  Session expiring soon
+                </p>
+              )}
+            </div>
+
+            {/* Calendar Connection Status */}
+            <div className="flex items-center gap-4">
+              {calendarConnected ? (
                 <div className="flex items-center gap-2">
-                  <button
-                    className="text-xs text-green-400 border border-green-500 px-2 py-0.5 hover:bg-green-900 hover:bg-opacity-20"
-                    disabled
-                  >
-                    [√] CALENDAR.SYS
-                  </button>
+                  <span className="text-sm flex items-center gap-1" style={{ color: 'var(--color-success-text)' }}>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Calendar Connected
+                  </span>
                   <button
                     onClick={handleDisconnectCalendar}
-                    className="text-xs text-yellow-400 hover:text-yellow-300 underline"
+                    className="text-xs"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      transition: 'color var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
                   >
-                    [UNLOAD]
+                    Disconnect
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={handleConnectCalendar}
-                  className="text-xs text-yellow-400 border border-yellow-500 px-2 py-0.5 hover:bg-yellow-900 hover:bg-opacity-20"
+                  className="px-4 py-2 text-sm font-medium flex items-center gap-2"
+                  style={{
+                    background: 'var(--color-primary)',
+                    color: 'var(--color-background)',
+                    borderRadius: 'var(--radius-lg)',
+                    transition: 'all var(--transition-base)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
                 >
-                  [LOAD CALENDAR.SYS]
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Connect Calendar
                 </button>
               )}
-              </div>
             </div>
           </div>
 
-          {/* Messages Area with ChatKit */}
-          <div className="flex-1 overflow-y-auto dos-screen">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Error Display */}
             {error && (
-              <div className="border border-red-500 p-2 m-4 mb-4 bg-red-900 bg-opacity-20">
-                <span className="text-red-400 font-mono">
-                  *** ERROR: {error} ***
-                </span>
+              <div className="mx-6 mt-4 px-4 py-3" style={{
+                background: 'var(--color-error-bg)',
+                border: '1px solid var(--color-error)',
+                color: 'var(--color-error)',
+                borderRadius: 'var(--radius-lg)'
+              }}>
+                {error}
               </div>
             )}
 
             {/* Loading Indicator */}
             {(isResponding || currentToolExecution) && (
-              <div className="m-4 mb-4">
+              <div className="mx-6 mt-4">
                 <DosLoadingIndicator
                   state={
                     currentToolExecution
@@ -451,127 +480,83 @@ export default function DosChat() {
               </div>
             )}
 
-            {/* ChatKit Component with DOS Theme */}
-            <ChatKit
-              control={control}
-              className="chatkit-dos-theme"
-            />
-          </div>
-          {/* Input Area */}
-          <div className="dos-input-area">
-            <DosInput
-              onSend={handleSendMessage}
-              disabled={false}
-            />
+            {/* ChatKit Component */}
+            <div className="flex-1" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <ChatKit
+                control={control}
+                className="chatkit-modern"
+                style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* DOS Theme CSS Override for ChatKit */}
+      {/* Minimal Modern ChatKit Styling */}
       <style>{`
-        /* ChatKit DOS Theme Override */
-        :global(.chatkit-dos-theme) {
-          background: transparent !important;
-          color: #4ade80 !important;
-          font-family: 'IBM Plex Mono', monospace !important;
-          height: 100% !important;
+        /* ChatKit container - clean, modern layout */
+        .chatkit-modern {
+          background: transparent;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          color: var(--color-text);
+          font-family: var(--font-family-base);
         }
 
-        /* Override message containers */
-        :global(.chatkit-dos-theme [class*="message"]) {
-          background: transparent !important;
-          border: 1px solid #22c55e !important;
-          color: #4ade80 !important;
-          padding: 0.5rem !important;
-          margin-bottom: 1rem !important;
-          font-family: 'IBM Plex Mono', monospace !important;
+        /* Thread/messages area - scrollable */
+        .chatkit-modern [class*="thread"] {
+          background: transparent;
+          padding: 1.5rem;
+          flex: 1;
+          overflow-y: auto;
+          min-height: 0;
         }
 
-        /* User messages in cyan */
-        :global(.chatkit-dos-theme [data-role="user"]),
-        :global(.chatkit-dos-theme [class*="user"]) {
-          color: #67e8f9 !important;
-          border-color: #06b6d4 !important;
+        /* Message styling */
+        .chatkit-modern [class*="message"] {
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
+          color: var(--color-text);
+          padding: 0.75rem;
+          margin-bottom: 1rem;
+          border-radius: var(--radius-md);
         }
 
-        /* Assistant messages in yellow */
-        :global(.chatkit-dos-theme [data-role="assistant"]),
-        :global(.chatkit-dos-theme [class*="assistant"]) {
-          color: #fde047 !important;
-          border-color: #eab308 !important;
+        /* Composer - fixed at bottom */
+        .chatkit-modern [class*="composer"] {
+          background: var(--color-surface);
+          border-top: 1px solid var(--color-border);
+          padding: 1rem;
+          flex-shrink: 0;
         }
 
-        /* Composer styling */
-        :global(.chatkit-dos-theme [class*="composer"]) {
-          background: #000 !important;
-          border-top: 2px solid #22c55e !important;
+        .chatkit-modern [class*="composer"] input,
+        .chatkit-modern [class*="composer"] textarea {
+          background: var(--color-background);
+          color: var(--color-text);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
+          padding: 0.5rem;
         }
 
-        :global(.chatkit-dos-theme [class*="composer"] input),
-        :global(.chatkit-dos-theme [class*="composer"] textarea) {
-          background: #000 !important;
-          color: #4ade80 !important;
-          border: 2px solid #22c55e !important;
-          font-family: 'IBM Plex Mono', monospace !important;
+        .chatkit-modern [class*="composer"] input::placeholder,
+        .chatkit-modern [class*="composer"] textarea::placeholder {
+          color: var(--color-text-light);
         }
 
-        /* Tool use indicators and progress */
-        :global(.chatkit-dos-theme [class*="progress"]),
-        :global(.chatkit-dos-theme [class*="tool"]) {
-          color: #22d3ee !important;
-          border: 1px solid #06b6d4 !important;
-          background: rgba(6, 182, 212, 0.1) !important;
-          font-family: 'IBM Plex Mono', monospace !important;
+        /* Buttons */
+        .chatkit-modern button {
+          background: var(--color-primary);
+          color: var(--color-background);
+          border: 1px solid var(--color-primary);
+          border-radius: var(--radius-md);
+          padding: 0.5rem 1rem;
+          transition: background var(--transition-base);
         }
 
-        /* Hide default header if present */
-        :global(.chatkit-dos-theme [class*="header"]) {
-          display: none !important;
-        }
-
-        /* Style thread container */
-        :global(.chatkit-dos-theme [class*="thread"]) {
-          background: transparent !important;
-          padding: 1rem !important;
-        }
-
-        /* Empty state styling */
-        :global(.chatkit-dos-theme [class*="empty"]),
-        :global(.chatkit-dos-theme [class*="start"]) {
-          color: #4ade80 !important;
-          font-family: 'IBM Plex Mono', monospace !important;
-        }
-
-        /* Button styling */
-        :global(.chatkit-dos-theme button) {
-          background: #000 !important;
-          color: #4ade80 !important;
-          border: 1px solid #22c55e !important;
-          font-family: 'IBM Plex Mono', monospace !important;
-        }
-
-        :global(.chatkit-dos-theme button:hover) {
-          background: rgba(34, 197, 94, 0.2) !important;
-          border-color: #4ade80 !important;
-        }
-
-        /* Scrollbar styling */
-        :global(.chatkit-dos-theme ::-webkit-scrollbar) {
-          width: 8px;
-        }
-
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-track) {
-          background: #000;
-          border-left: 1px solid #22c55e;
-        }
-
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb) {
-          background: #22c55e;
-          border: 1px solid #4ade80;
-        }
-
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb:hover) {
-          background: #4ade80;
+        .chatkit-modern button:hover {
+          background: var(--color-primary-dark);
         }
       `}</style>
 

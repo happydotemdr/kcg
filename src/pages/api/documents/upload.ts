@@ -6,18 +6,27 @@
 
 import type { APIRoute } from 'astro';
 import { createDocument } from '../../../lib/db';
+import { findUserByClerkId } from '../../../lib/db/repositories/users';
 
 export const POST: APIRoute = async ({ locals, request }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
-    const userId = auth?.userId;
+    const { userId: clerkUserId } = locals.auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Get database user ID
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found in database' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // Parse multipart form data
@@ -76,7 +85,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Create document record in database
     const document = await createDocument({
-      user_id: userId,
+      user_id: dbUser.id,
       file_name: file.name,
       file_type: file.type,
       file_size: file.size,

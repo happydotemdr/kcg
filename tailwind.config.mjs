@@ -40,6 +40,7 @@ export default {
           800: '#1f2937',
           900: '#111827',
         },
+        'dos-green': '#00ff00',
       },
       fontFamily: {
         sans: ['Inter var', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],

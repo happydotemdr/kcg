@@ -6,18 +6,27 @@
 
 import type { APIRoute } from 'astro';
 import { getDocumentById, deleteDocument } from '../../../lib/db';
+import { findUserByClerkId } from '../../../lib/db/repositories/users';
 
 export const GET: APIRoute = async ({ locals, params }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
-    const userId = auth?.userId;
+    const { userId: clerkUserId } = locals.auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Get database user ID
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found in database' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const documentId = params.id;
@@ -30,7 +39,7 @@ export const GET: APIRoute = async ({ locals, params }) => {
     }
 
     // Fetch document
-    const document = await getDocumentById(documentId, userId);
+    const document = await getDocumentById(documentId, dbUser.id);
 
     if (!document) {
       return new Response(JSON.stringify({ error: 'Document not found' }), {
@@ -60,14 +69,22 @@ export const GET: APIRoute = async ({ locals, params }) => {
 export const DELETE: APIRoute = async ({ locals, params }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
-    const userId = auth?.userId;
+    const { userId: clerkUserId } = locals.auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Get database user ID
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found in database' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const documentId = params.id;
@@ -80,7 +97,7 @@ export const DELETE: APIRoute = async ({ locals, params }) => {
     }
 
     // Delete document
-    const success = await deleteDocument(documentId, userId);
+    const success = await deleteDocument(documentId, dbUser.id);
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Document not found or already deleted' }), {

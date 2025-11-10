@@ -60,42 +60,39 @@ export default function ToolApprovalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75">
       {/* DOS-themed modal */}
-      <div className="dos-approval-modal relative border-4 border-yellow-500 bg-black p-6 font-mono max-w-2xl w-full mx-4">
-        {/* Scanlines */}
-        <div className="absolute inset-0 pointer-events-none opacity-20" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(234, 179, 8, 0.1) 2px, rgba(234, 179, 8, 0.1) 4px)',
-        }}></div>
-
+      <div className="dos-approval-modal relative p-6 max-w-2xl w-full mx-4 border-2 border-amber-500 bg-white rounded-lg shadow-xl">
         {/* Content */}
         <div className="relative z-10">
           {/* Header */}
-          <div className="border-b-2 border-yellow-500 pb-2 mb-4">
+          <div className="pb-2 mb-4 border-b-2 border-amber-500">
             <div className="flex items-center justify-between">
-              <h2 className="text-yellow-400 text-xl">
-                ⚠ APPROVAL REQUIRED ⚠
+              <h2 className="text-xl text-amber-600 font-semibold">
+                Approval Required
               </h2>
-              <div className="text-red-400 text-sm animate-pulse">
-                [{timeLeft}s]
+              <div className="text-sm animate-pulse text-red-600 font-semibold">
+                {timeLeft}s
               </div>
             </div>
           </div>
 
           {/* Tool Info */}
           <div className="mb-6">
-            <div className="text-cyan-400 mb-2">
-              <span className="text-green-400">TOOL:</span> {toolName}
+            <div className="mb-2 text-gray-700">
+              <span className="text-gray-900 font-semibold">Tool:</span> {toolName}
             </div>
 
             {/* Arguments */}
             {formatArguments().length > 0 && (
-              <div className="border border-green-500 p-3 bg-green-900 bg-opacity-10 mt-3">
-                <div className="text-green-400 mb-2 text-sm">PARAMETERS:</div>
+              <div className="p-3 mt-3 border border-gray-300 bg-gray-50 rounded">
+                <div className="mb-2 text-sm text-gray-700 font-semibold">
+                  Parameters:
+                </div>
                 {formatArguments().map(({ key, value }) => (
-                  <div key={key} className="text-cyan-300 text-sm mb-1 pl-2">
-                    <span className="text-yellow-400">{key}:</span>{' '}
-                    <span className="text-white">{value}</span>
+                  <div key={key} className="text-sm mb-1 pl-2 text-gray-700">
+                    <span className="text-gray-900 font-medium">{key}:</span>{' '}
+                    <span className="text-gray-600">{value}</span>
                   </div>
                 ))}
               </div>
@@ -103,13 +100,15 @@ export default function ToolApprovalModal({
           </div>
 
           {/* Warning Message */}
-          <div className="border-2 border-red-500 p-3 bg-red-900 bg-opacity-20 mb-6">
-            <div className="text-red-400 text-sm">
-              <div className="mb-1">*** SECURITY WARNING ***</div>
-              <div className="text-red-300">
+          <div className="p-3 mb-6 border-2 border-red-400 bg-red-50 rounded">
+            <div className="text-sm text-red-700">
+              <div className="mb-1 font-semibold">
+                Security Warning
+              </div>
+              <div className="text-red-600">
                 This action will permanently delete a calendar event.
               </div>
-              <div className="text-red-300 mt-1">
+              <div className="mt-1 text-red-600">
                 Please review the parameters carefully before approving.
               </div>
             </div>
@@ -119,20 +118,20 @@ export default function ToolApprovalModal({
           <div className="flex gap-4 justify-center">
             <button
               onClick={handleReject}
-              className="px-6 py-2 border-2 border-red-500 text-red-400 hover:bg-red-900 hover:bg-opacity-30 transition-colors"
+              className="px-6 py-2 transition-colors border-2 border-red-500 text-red-700 bg-white rounded hover:bg-red-50"
             >
-              [REJECT] (Esc)
+              Reject (Esc)
             </button>
             <button
               onClick={handleApprove}
-              className="px-6 py-2 border-2 border-green-500 text-green-400 hover:bg-green-900 hover:bg-opacity-30 transition-colors animate-pulse"
+              className="px-6 py-2 transition-colors animate-pulse border-2 border-green-600 text-white bg-green-600 rounded hover:bg-green-700"
             >
-              [APPROVE] (Enter)
+              Approve (Enter)
             </button>
           </div>
 
           {/* Instructions */}
-          <div className="mt-4 text-center text-green-400 text-xs">
+          <div className="mt-4 text-center text-xs text-gray-600">
             Press Enter to approve or Esc to reject
           </div>
         </div>

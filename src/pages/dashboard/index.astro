@@ -1,6 +1,5 @@
 ---
 import AppHeader from '@components/AppHeader';
-import { ThemeProvider } from '@lib/theme/ThemeContext';
 import { findUserByClerkId } from '@lib/db/repositories/users';
 
 export const prerender = false;
@@ -30,26 +29,13 @@ const email = dbUser?.email || '';
     <title>Dashboard - Keep Choosing Good</title>
     <meta name="description" content="Your personal dashboard" />
 
-    <!-- Theme Initialization (MUST be first to prevent flash) -->
-    <script is:inline>
-      (function() {
-        const STORAGE_KEY = 'kcg-theme-preference';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = stored === 'system' || !stored ? systemPreference : stored;
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
-
     <!-- Theme Styles -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
-    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
   </head>
   <body>
-    <ThemeProvider client:only="react">
-      <div class="dashboard">
-        <!-- Unified Header -->
-        <AppHeader theme="modern" currentPage="dashboard" client:only="react" />
+    <div class="dashboard">
+      <!-- Unified Header -->
+      <AppHeader currentPage="dashboard" client:only="react" />
 
         <!-- Welcome Section -->
         <div class="welcome-section">
@@ -213,8 +199,7 @@ const email = dbUser?.email || '';
         </section>
       </div>
     </main>
-      </div>
-    </ThemeProvider>
+    </div>
   </body>
 </html>
 

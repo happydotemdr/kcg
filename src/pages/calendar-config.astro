@@ -5,7 +5,6 @@
  */
 
 import AppHeader from '@components/AppHeader';
-import { ThemeProvider } from '@lib/theme/ThemeContext';
 import { initializeDatabase } from '../lib/db';
 import { findUserByClerkId } from '../lib/db/repositories/users';
 
@@ -31,252 +30,109 @@ if (!dbUser) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar Configuration - Keep Choosing Good</title>
+    <meta name="description" content="Configure your Google Calendar mappings for intelligent calendar management" />
 
-    <!-- Theme Initialization (MUST be first to prevent flash) -->
-    <script is:inline>
-      (function() {
-        const STORAGE_KEY = 'kcg-theme-preference';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = stored === 'system' || !stored ? systemPreference : stored;
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
-
-    <!-- Theme Styles -->
+    <!-- Design Tokens -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
-    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
-
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        background: var(--color-background);
-        color: var(--color-text);
-      }
-      .page-title {
-        font-size: 1.875rem;
-        font-weight: bold;
-        color: var(--color-text);
-      }
-      .page-description {
-        margin-top: 0.5rem;
-        color: var(--color-text-secondary);
-      }
-      .card {
-        background: var(--color-surface);
-        box-shadow: 0 1px 3px 0 color-mix(in srgb, black 10%, transparent), 0 1px 2px 0 color-mix(in srgb, black 6%, transparent);
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        border: 1px solid var(--color-border);
-      }
-      .card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--color-text);
-        margin-bottom: 1rem;
-      }
-      .form-label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--color-text);
-        margin-bottom: 0.5rem;
-      }
-      .form-input, .form-select {
-        width: 100%;
-        border: 1px solid var(--color-border);
-        border-radius: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: var(--color-surface);
-        color: var(--color-text);
-        font-size: 1rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
-      }
-      .form-input:focus, .form-select:focus {
-        outline: none;
-        border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
-      }
-      .form-checkbox {
-        height: 1rem;
-        width: 1rem;
-        accent-color: var(--color-primary);
-        border: 1px solid var(--color-border);
-        border-radius: 0.25rem;
-        cursor: pointer;
-      }
-      .form-checkbox:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
-      }
-      .btn-primary {
-        width: 100%;
-        background: var(--color-primary);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
-      .btn-primary:hover {
-        opacity: 0.9;
-      }
-      .btn-danger {
-        color: var(--color-error);
-        font-size: 0.875rem;
-        font-weight: 500;
-        background: none;
-        border: none;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
-      .btn-danger:hover {
-        opacity: 0.8;
-      }
-      .mapping-card {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem;
-        border: 1px solid var(--color-border);
-        border-radius: 0.5rem;
-      }
-      .mapping-title {
-        font-weight: 500;
-        color: var(--color-text);
-      }
-      .mapping-info {
-        font-size: 0.875rem;
-        color: var(--color-text-secondary);
-        margin-top: 0.25rem;
-      }
-      .mapping-meta {
-        font-size: 0.75rem;
-        color: var(--color-text-tertiary);
-        margin-top: 0.25rem;
-      }
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-      }
-      .badge-primary {
-        background: color-mix(in srgb, var(--color-primary) 15%, transparent);
-        color: var(--color-primary);
-      }
-      .badge-success {
-        background: color-mix(in srgb, var(--color-success) 15%, transparent);
-        color: var(--color-success);
-        margin-left: 0.5rem;
-      }
-      .alert {
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        border-radius: 0.5rem;
-      }
-      .alert-success {
-        background: color-mix(in srgb, var(--color-success) 10%, transparent);
-        border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
-        color: var(--color-success);
-      }
-      .alert-error {
-        background: color-mix(in srgb, var(--color-error) 10%, transparent);
-        border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
-        color: var(--color-error);
-      }
-      .text-muted {
-        color: var(--color-text-tertiary);
-      }
-    </style>
   </head>
   <body>
-    <ThemeProvider client:only="react">
+    <div class="calendar-config">
       <!-- Unified Header -->
-      <AppHeader theme="modern" currentPage="calendar" client:only="react" />
+      <AppHeader currentPage="calendar" client:only="react" />
 
-    <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="page-title">Calendar Configuration</h1>
-        <p class="page-description">
-          Map your Google Calendars to different areas of your life for intelligent calendar management.
-        </p>
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <h1 class="welcome-title">Calendar Configuration</h1>
+        <p class="welcome-subtitle">Map your Google Calendars to different areas of your life for intelligent calendar management.</p>
       </div>
 
-      <!-- Status Message -->
-      <div id="status-message" class="hidden"></div>
+      <!-- Main Content -->
+      <main class="calendar-content">
+        <!-- Status Message -->
+        <div id="status-message" class="hidden"></div>
 
-      <!-- Current Mappings -->
-      <div class="card mb-8">
-        <h2 class="card-title">Current Calendar Mappings</h2>
-        <div id="current-mappings" class="space-y-4">
-          <p class="text-muted">Loading...</p>
+        <div class="cards-grid">
+          <!-- Current Mappings Card -->
+          <section class="card mappings-card">
+            <div class="card-header">
+              <h2 class="card-title">Current Calendar Mappings</h2>
+              <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="card-content">
+              <div id="current-mappings">
+                <p class="text-muted">Loading...</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Add New Mapping Card -->
+          <section class="card add-mapping-card">
+            <div class="card-header">
+              <h2 class="card-title">Add Calendar Mapping</h2>
+              <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </div>
+            <div class="card-content">
+              <form id="add-mapping-form" class="form-container">
+                <div class="form-group">
+                  <label for="calendar-select" class="form-label">
+                    Select Google Calendar
+                  </label>
+                  <select
+                    id="calendar-select"
+                    class="form-select"
+                    required
+                  >
+                    <option value="">Loading calendars...</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="entity-type-select" class="form-label">
+                    Entity Type
+                  </label>
+                  <select
+                    id="entity-type-select"
+                    class="form-select"
+                    required
+                  >
+                    <option value="">Select entity type...</option>
+                    <option value="family">Family (Default for MVP)</option>
+                    <option value="personal">Personal</option>
+                    <option value="work">Work</option>
+                  </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <input
+                    id="is-default-checkbox"
+                    type="checkbox"
+                    class="form-checkbox"
+                  />
+                  <label for="is-default-checkbox" class="checkbox-label">
+                    Set as default calendar
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  class="btn-primary"
+                >
+                  Add Calendar Mapping
+                </button>
+              </form>
+            </div>
+          </section>
         </div>
-      </div>
-
-      <!-- Add New Mapping -->
-      <div class="card">
-        <h2 class="card-title">Add Calendar Mapping</h2>
-
-        <form id="add-mapping-form" class="space-y-4">
-          <div>
-            <label for="calendar-select" class="form-label">
-              Select Google Calendar
-            </label>
-            <select
-              id="calendar-select"
-              class="form-select"
-              required
-            >
-              <option value="">Loading calendars...</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="entity-type-select" class="form-label">
-              Entity Type
-            </label>
-            <select
-              id="entity-type-select"
-              class="form-select"
-              required
-            >
-              <option value="">Select entity type...</option>
-              <option value="family">Family (Default for MVP)</option>
-              <option value="personal">Personal</option>
-              <option value="work">Work</option>
-            </select>
-          </div>
-
-          <div class="flex items-center">
-            <input
-              id="is-default-checkbox"
-              type="checkbox"
-              class="form-checkbox"
-            />
-            <label for="is-default-checkbox" class="ml-2 block text-sm" style="color: var(--color-text);">
-              Set as default calendar
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            class="btn-primary"
-          >
-            Add Calendar Mapping
-          </button>
-        </form>
-      </div>
+      </main>
     </div>
 
     <script>
@@ -321,20 +177,20 @@ if (!dbUser) {
               container.innerHTML = '<p class="text-muted">No calendar mappings yet. Add one below to get started.</p>';
             } else {
               container.innerHTML = data.mappings.map(mapping => `
-                <div class="mapping-card">
-                  <div>
+                <div class="mapping-item">
+                  <div class="mapping-details">
                     <h3 class="mapping-title">${mapping.calendar_name}</h3>
-                    <p class="mapping-info">
+                    <div class="mapping-badges">
                       <span class="badge badge-primary">
                         ${mapping.entity_type}
                       </span>
                       ${mapping.is_default ? '<span class="badge badge-success">Default</span>' : ''}
-                    </p>
+                    </div>
                     <p class="mapping-meta">Calendar ID: ${mapping.google_calendar_id}</p>
                   </div>
                   <button
                     onclick="deleteMapping('${mapping.id}')"
-                    class="btn-danger"
+                    class="btn-delete"
                   >
                     Delete
                   </button>
@@ -443,6 +299,324 @@ if (!dbUser) {
       loadCalendars();
       loadMappings();
     </script>
-    </ThemeProvider>
   </body>
 </html>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    background: var(--color-background);
+  }
+
+  .calendar-config {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, var(--color-background) 0%, var(--color-surface) 100%);
+  }
+
+  /* Welcome Section */
+  .welcome-section {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2rem;
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-light);
+  }
+
+  /* Main Content */
+  .calendar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Card Styles */
+  .card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+
+  .card:hover {
+    transform: var(--hover-transform);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .card-icon {
+    color: var(--color-primary);
+    opacity: 0.7;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Status Messages */
+  #status-message {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #status-message.alert-success {
+    background: var(--color-success-bg);
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+    color: var(--color-success-text);
+  }
+
+  #status-message.alert-error {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+    color: var(--color-error);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* Mapping Items */
+  .mapping-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--color-background);
+    border-radius: var(--radius-md);
+    transition: background var(--transition-base);
+    gap: 1rem;
+  }
+
+  .mapping-item:hover {
+    background: var(--color-surface);
+  }
+
+  .mapping-details {
+    flex: 1;
+  }
+
+  .mapping-title {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .mapping-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .mapping-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-primary {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--color-secondary);
+  }
+
+  .badge-success {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+  }
+
+  .text-muted {
+    color: var(--color-text-light);
+    font-size: 0.875rem;
+  }
+
+  /* Form Styles */
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  .form-select {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--color-background);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-size: 1rem;
+    transition: all var(--transition-base);
+    cursor: pointer;
+  }
+
+  .form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  .checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .form-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--color-primary);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .form-checkbox:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  .checkbox-label {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    cursor: pointer;
+    margin: 0;
+  }
+
+  /* Button Styles */
+  .btn-primary {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-base);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
+  }
+
+  .btn-delete {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+  }
+
+  .btn-delete:hover {
+    background: var(--color-error);
+    color: white;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .welcome-section {
+      padding: 1.5rem;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+    }
+
+    .welcome-subtitle {
+      font-size: 0.875rem;
+    }
+
+    .calendar-content {
+      padding: 1rem;
+    }
+
+    .cards-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .mapping-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .btn-delete {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .cards-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

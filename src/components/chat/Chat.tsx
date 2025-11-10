@@ -372,7 +372,9 @@ export default function Chat() {
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
       {/* Unified Header */}
-      <AppHeader theme="modern" currentPage="chat" />
+      <div style={{ flexShrink: 0 }}>
+        <AppHeader currentPage="chat" />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
