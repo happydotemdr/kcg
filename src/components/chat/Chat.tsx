@@ -9,6 +9,9 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSidebar from './ChatSidebar';
 import AppHeader from '../AppHeader';
+import DocumentUploadZone from './DocumentUploadZone';
+import DocumentHistory from './DocumentHistory';
+import ProcessingStatusCard, { type ProcessingStage } from './ProcessingStatusCard';
 import type { Message, Conversation } from '../../types/chat';
 
 export default function Chat() {
@@ -19,6 +22,11 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [toolInUse, setToolInUse] = useState<string | null>(null);
+
+  // Document upload state
+  const [showUploadZone, setShowUploadZone] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState<Map<string, ProcessingStage>>(new Map());
+  const [documentRefreshTrigger, setDocumentRefreshTrigger] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -243,6 +251,86 @@ export default function Chat() {
     }
   };
 
+  // Handle document upload
+  const handleDocumentUpload = async (files: File[]) => {
+    try {
+      setShowUploadZone(false);
+
+      for (const file of files) {
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Track upload status
+        const tempId = `${file.name}-${Date.now()}`;
+        setUploadingDocuments((prev) => new Map(prev).set(tempId, 'uploading'));
+
+        // Upload file
+        const response = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload document');
+        }
+
+        // Parse response (document ID available for tracking)
+        await response.json();
+
+        // Update status to uploaded
+        setUploadingDocuments((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(tempId, 'uploaded');
+          return newMap;
+        });
+
+        // Simulate processing stages (in real implementation, this would be driven by backend)
+        setTimeout(() => {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'extracting');
+            return newMap;
+          });
+        }, 500);
+
+        setTimeout(() => {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'checking');
+            return newMap;
+          });
+        }, 1500);
+
+        setTimeout(() => {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'complete');
+            return newMap;
+          });
+
+          // Remove from uploading list after completion
+          setTimeout(() => {
+            setUploadingDocuments((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(tempId);
+              return newMap;
+            });
+            // Trigger document history refresh
+            setDocumentRefreshTrigger((prev) => prev + 1);
+          }, 2000);
+        }, 2500);
+
+        // Send message to Claude to process the document
+        const message = `I've uploaded "${file.name}". Please extract any calendar events from this document.`;
+        await handleSendMessage(message, []);
+      }
+    } catch (err) {
+      console.error('Document upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload document');
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
       {/* Unified Header */}
@@ -258,7 +346,7 @@ export default function Chat() {
         />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Conversation Info Bar */}
           <div className="px-6 py-3 flex items-center justify-between" style={{
             background: 'var(--color-background)',
@@ -275,6 +363,34 @@ export default function Chat() {
               )}
             </div>
             <div className="flex items-center gap-4">
+              {/* Document Upload Button */}
+              <button
+                onClick={() => setShowUploadZone(!showUploadZone)}
+                className="px-4 py-2 text-sm font-medium flex items-center gap-2"
+                style={{
+                  background: showUploadZone ? 'var(--color-primary)' : 'var(--color-surface)',
+                  color: showUploadZone ? 'var(--color-background)' : 'var(--color-text)',
+                  border: `1px solid ${showUploadZone ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  borderRadius: 'var(--radius-lg)',
+                  transition: 'all var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!showUploadZone) {
+                    e.currentTarget.style.background = 'var(--color-background)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showUploadZone) {
+                    e.currentTarget.style.background = 'var(--color-surface)';
+                  }
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload Document
+              </button>
+
               {/* Calendar Connection Button */}
               {calendarConnected ? (
                 <div className="flex items-center gap-2">
@@ -331,6 +447,38 @@ export default function Chat() {
               {error}
             </div>
           )}
+
+          {/* Document Upload Zone */}
+          {showUploadZone && (
+            <div className="mx-6 mt-4">
+              <DocumentUploadZone
+                onUpload={handleDocumentUpload}
+                disabled={isStreaming}
+                maxFiles={3}
+              />
+            </div>
+          )}
+
+          {/* Processing Status Cards */}
+          {Array.from(uploadingDocuments.entries()).map(([id, stage]) => {
+            const fileName = id.split('-').slice(0, -1).join('-');
+            return (
+              <div key={id} className="mx-6 mt-4">
+                <ProcessingStatusCard
+                  fileName={fileName}
+                  stage={stage}
+                  progress={
+                    stage === 'uploading' ? 25 :
+                    stage === 'uploaded' ? 50 :
+                    stage === 'extracting' ? 75 :
+                    stage === 'checking' ? 90 :
+                    100
+                  }
+                  eventsFound={stage === 'checking' || stage === 'complete' ? 12 : 0}
+                />
+              </div>
+            );
+          })}
 
           {messages.length === 0 && !error && (
             <div className="h-full flex items-center justify-center">
@@ -445,6 +593,12 @@ export default function Chat() {
             />
           </div>
         </div>
+
+        {/* Document History Sidebar */}
+        <DocumentHistory
+          onViewDocument={(id) => console.log('View document:', id)}
+          refreshTrigger={documentRefreshTrigger}
+        />
       </div>
     </div>
   );
