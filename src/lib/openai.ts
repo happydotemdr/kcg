@@ -611,12 +611,16 @@ export async function streamChatCompletionWithTools(
   model: string = DEFAULT_MODEL,
   systemPrompt: string = DEFAULT_SYSTEM_PROMPT
 ): Promise<void> {
+  console.log('[OpenAI streamChatCompletionWithTools] Starting stream for user:', userId, 'model:', model, 'messages:', messages.length);
+
   try {
     // Convert messages to OpenAI format
     let openaiMessages: ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...messages.map(toOpenAIMessage),
     ];
+
+    console.log('[OpenAI] Converted to OpenAI format:', openaiMessages.length, 'messages');
 
     let fullText = '';
     const MAX_ITERATIONS = 5; // Prevent infinite loops
@@ -631,6 +635,8 @@ export async function streamChatCompletionWithTools(
 
     // Agentic loop: keep calling the API until no more tools are used
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      console.log('[OpenAI] Iteration', iteration + 1, '- Calling OpenAI API...');
+
       // Create streaming request with all calendar tools (CRUD)
       const stream = await client.chat.completions.create({
         model,
@@ -640,6 +646,8 @@ export async function streamChatCompletionWithTools(
         tools: CALENDAR_FUNCTIONS, // Use all CRUD functions
         tool_choice: 'auto', // Let the model decide when to use tools
       });
+
+      console.log('[OpenAI] Stream created successfully, processing chunks...');
 
       let currentText = '';
       let toolCalls: Array<{
@@ -654,14 +662,22 @@ export async function streamChatCompletionWithTools(
       } | null = null;
 
       // Process stream chunks
+      let chunkCount = 0;
       for await (const chunk of stream) {
+        chunkCount++;
         const delta = chunk.choices[0]?.delta;
+        const finishReason = chunk.choices[0]?.finish_reason;
+
+        if (chunkCount === 1) {
+          console.log('[OpenAI] First chunk received:', JSON.stringify(chunk, null, 2));
+        }
 
         // Handle text content
         if (delta?.content) {
           currentText += delta.content;
           fullText += delta.content;
           onText(delta.content);
+          console.log('[OpenAI] Text chunk received, length:', delta.content.length, 'total so far:', fullText.length);
         }
 
         // Handle tool calls
@@ -694,7 +710,6 @@ export async function streamChatCompletionWithTools(
         }
 
         // Check if tool call is complete
-        const finishReason = chunk.choices[0]?.finish_reason;
         if (finishReason === 'tool_calls' && currentToolCall && currentToolCall.id && currentToolCall.name) {
           toolCalls.push({
             id: currentToolCall.id,
@@ -702,11 +717,20 @@ export async function streamChatCompletionWithTools(
             arguments: currentToolCall.arguments,
           });
           currentToolCall = null;
+          console.log('[OpenAI] Tool call detected:', currentToolCall);
+        }
+
+        // Log finish reason
+        if (finishReason) {
+          console.log('[OpenAI] Stream finished with reason:', finishReason);
         }
       }
 
+      console.log('[OpenAI] Stream loop ended. Chunks processed:', chunkCount, 'Text length:', currentText.length, 'Tool calls:', toolCalls.length);
+
       // If no tool calls were made, we're done
       if (toolCalls.length === 0) {
+        console.log('[OpenAI] No tool calls made, breaking loop');
         break;
       }
 
@@ -757,9 +781,11 @@ export async function streamChatCompletionWithTools(
     }
 
     // Call completion handler
+    console.log('[OpenAI] Stream completed successfully. Total text length:', fullText.length);
     onComplete(fullText);
 
   } catch (error) {
+    console.error('[OpenAI] Stream error:', error);
     onError(error as Error);
   }
 }

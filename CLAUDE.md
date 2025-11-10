@@ -10,8 +10,8 @@ A modern AI chat experience built with Astro and React, featuring both Claude (A
 - **Backend**: Astro API Routes (Node.js)
 - **Authentication**: Clerk (@clerk/astro v2)
 - **AI**:
-  - Anthropic Claude SDK (@anthropic-ai/sdk)
-  - OpenAI SDK (openai)
+  - **Claude**: Anthropic Claude SDK (@anthropic-ai/sdk) with custom streaming implementation
+  - **ChatGPT**: OpenAI ChatKit SDK (@openai/chatkit-react) + OpenAI Agents SDK (@openai/agents)
 - **Storage**: File-based JSON conversation persistence (separate storage for each AI provider)
 
 ### Recent Upgrades (November 2025)
@@ -21,11 +21,13 @@ This project has been upgraded to the latest versions:
 - **@astrojs/node v8 → v9.5.0**: Latest Node adapter
 - **@astrojs/react v3 → v4.4.2**: React integration updates
 - **@astrojs/tailwind v5 → v6.0.2**: Tailwind CSS updates
+- **ChatGPT → ChatKit + Agents SDK**: Migrated from custom OpenAI implementation to official ChatKit SDK with Agents SDK for tool calling
 
 #### Breaking Changes Addressed
 1. **Output Mode**: Using `output: 'server'` for full server-side rendering (required for API routes with Node adapter)
 2. **Clerk Authentication**: Updated from `locals.auth.userId` to `locals.auth()` function call pattern
 3. **Type Safety**: All TypeScript errors resolved with updated type definitions
+4. **ChatKit Integration**: Replaced custom SSE streaming with ChatKit ThreadStreamEvent protocol
 
 ### Key Features
 1. **User Authentication**: Complete sign-up/sign-in flow powered by Clerk with protected routes
@@ -71,13 +73,13 @@ src/
 │   │   ├── ChatInput.tsx     # Message input with image upload
 │   │   └── ChatSidebar.tsx   # Conversation history sidebar
 │   └── gpt/              # ChatGPT components (DOS-themed UI)
-│       ├── DosChat.tsx   # DOS-themed chat orchestrator
-│       ├── DosMessage.tsx    # DOS-styled message display
+│       ├── DosChat.tsx   # DOS-themed ChatKit integration
 │       ├── DosInput.tsx      # Command-line style input
 │       └── DosSidebar.tsx    # File manager style sidebar
 ├── lib/
 │   ├── claude.ts         # Claude SDK wrapper and utilities
-│   ├── openai.ts         # OpenAI SDK wrapper and utilities
+│   ├── openai.ts         # OpenAI SDK wrapper (deprecated - use openai-agents.ts)
+│   ├── openai-agents.ts  # OpenAI Agents SDK with calendar tools
 │   ├── storage.ts        # Claude conversation persistence
 │   └── gpt-storage.ts    # ChatGPT conversation persistence
 ├── pages/
@@ -87,8 +89,10 @@ src/
 │   │   │   ├── conversations.ts  # GET - List conversations
 │   │   │   ├── conversations/[id].ts  # GET/DELETE - Manage conversation
 │   │   │   └── models.ts # GET - List available models
-│   │   └── gpt/          # ChatGPT API routes (all protected with Clerk auth)
-│   │       ├── send.ts   # POST - Send message with streaming
+│   │   ├── chatkit/       # ChatKit API routes (all protected with Clerk auth)
+│   │   │   ├── backend.ts     # POST - ChatKit backend with ThreadStreamEvent protocol
+│   │   │   └── session.ts     # POST - Generate ChatKit client tokens
+│   │   └── gpt/          # Legacy ChatGPT routes (conversation management only)
 │   │       ├── conversations.ts  # GET - List conversations
 │   │       ├── conversations/[id].ts  # GET/DELETE - Manage conversation
 │   │       └── models.ts # GET - List available models
@@ -97,9 +101,10 @@ src/
 │   ├── dashboard/        # Protected dashboard pages
 │   │   └── index.astro   # User dashboard with profile info
 │   ├── chat.astro        # Claude chat page (protected, modern UI)
-│   └── chatgpt.astro     # ChatGPT page (protected, DOS terminal UI)
+│   └── chatgpt.astro     # ChatGPT page (protected, DOS terminal UI with ChatKit)
 └── types/
-    └── chat.ts           # TypeScript type definitions
+    ├── chat.ts           # Message and Conversation types
+    └── chatkit-events.ts # ChatKit ThreadStreamEvent protocol types
 ```
 
 ## API Endpoints
@@ -126,13 +131,29 @@ Delete a Claude conversation permanently.
 #### GET /api/chat/models
 List available Claude models.
 
-### ChatGPT Endpoints (`/api/gpt/*`)
+### ChatKit Endpoints (`/api/chatkit/*`)
 
-#### POST /api/gpt/send
-Send a message to ChatGPT and receive streaming response.
-- Supports new conversations or continuing existing ones
+#### POST /api/chatkit/session
+Generate ChatKit client tokens for authenticated users.
+- Validates Clerk session
+- Returns `{ client_secret }` for ChatKit React component authentication
+
+#### POST /api/chatkit/backend
+Self-hosted ChatKit backend implementing ThreadStreamEvent protocol.
+- Supports new conversations (threads) or continuing existing ones
 - Handles text + image multimodal input
-- Returns SSE stream with incremental responses
+- Integrates with OpenAI Agents SDK for calendar tool calling
+- Returns SSE stream with ThreadStreamEvent format:
+  - `thread.created` - New conversation created
+  - `thread.item.added` - User/assistant message or tool call added
+  - `thread.item.updated` - Content streaming during generation
+  - `thread.item.done` - Message complete
+  - `progress_update` - Tool execution progress
+  - `error` - Error events with retry support
+
+### Legacy ChatGPT Endpoints (`/api/gpt/*`)
+
+**Note**: The `/api/gpt/send` endpoint has been replaced by `/api/chatkit/backend`. The following endpoints remain for conversation management:
 
 #### GET /api/gpt/conversations
 List all ChatGPT conversations, sorted by most recent.
@@ -218,12 +239,17 @@ GOOGLE_REDIRECT_URI=http://localhost:4321/api/auth/google/callback
 - **Conversation Pruning**: Keeps last 20 messages by default
 - **Storage**: `data/conversations/`
 
-#### ChatGPT (DOS Theme)
+#### ChatGPT with ChatKit (DOS Theme)
+- **Frontend**: OpenAI ChatKit React SDK (`@openai/chatkit-react` v1.2.0)
+- **Backend**: Self-hosted ChatKit backend with ThreadStreamEvent protocol
+- **Agent Runtime**: OpenAI Agents SDK (`@openai/agents` v0.3.0)
 - **Model**: gpt-4o (most capable model, great for complex tasks)
 - **Max Tokens**: 4096 per response
 - **Context Window**: Managed automatically by storage layer
 - **Conversation Pruning**: Keeps last 20 messages by default
 - **Storage**: `data/gpt-conversations/`
+- **Tool Integration**: Calendar CRUD operations via Agents SDK
+- **Streaming**: ThreadStreamEvent SSE protocol with progress indicators
 
 ## Best Practices Implemented
 
@@ -253,6 +279,40 @@ GOOGLE_REDIRECT_URI=http://localhost:4321/api/auth/google/callback
    - Full TypeScript coverage
    - Proper type definitions matching Anthropic's API
    - Type-safe message content blocks
+
+### From OpenAI's ChatKit & Agents SDK Guidelines
+
+1. **Official SDK Integration**
+   - Uses `@openai/chatkit-react` for robust frontend chat UI
+   - Implements `@openai/agents` for agentic tool execution
+   - Self-hosted backend with ThreadStreamEvent protocol
+   - Proper session management via `/api/chatkit/session`
+
+2. **ThreadStreamEvent Protocol**
+   - Compliant with ChatKit's streaming event format
+   - `thread.created` → `thread.item.added` → `thread.item.updated` → `thread.item.done` flow
+   - Progress indicators via `progress_update` events
+   - Tool execution visibility with `ClientToolCallItem` events
+   - Proper error handling with `ErrorEvent` and retry support
+
+3. **Agent Tool Integration**
+   - Zod schema validation for tool parameters
+   - Automatic tool execution via Agents SDK
+   - Streaming feedback during tool calls
+   - Calendar CRUD operations (get, create, update, delete events)
+   - Multi-calendar support with intelligent routing
+
+4. **Type Safety & Protocol Compliance**
+   - Complete TypeScript types for ThreadStreamEvent protocol (`/src/types/chatkit-events.ts`)
+   - Discriminated unions for event types
+   - ISO 8601 timestamps throughout
+   - Proper SSE formatting (`data: {JSON}\n\n`)
+
+5. **DOS Theme Preservation**
+   - ChatKit component styled with extensive CSS overrides
+   - Retro CRT monitor effects maintained
+   - Green terminal text, scanlines, and DOS borders
+   - Command-line aesthetic preserved
 
 ## Development
 

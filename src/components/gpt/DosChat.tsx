@@ -1,27 +1,53 @@
 /**
- * DOS-Themed ChatGPT Component
+ * DOS-Themed ChatGPT Component with ChatKit Integration
  * Retro command-line interface aesthetic
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import DosMessage from './DosMessage';
+import React, { useState, useEffect } from 'react';
+import { ChatKit, useChatKit } from '@openai/chatkit-react';
+import '@openai/chatkit-react/styles.css';
 import DosInput from './DosInput';
 import DosSidebar from './DosSidebar';
 import AppHeader from '../AppHeader';
-import type { Message, Conversation } from '../../types/chat';
 
 export default function DosChat() {
-  const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [calendarConnected, setCalendarConnected] = useState(false);
-  const [toolInUse, setToolInUse] = useState<string | null>(null);
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // Initialize ChatKit
+  const { control, setThreadId, sendUserMessage } = useChatKit({
+    api: {
+      async getClientSecret() {
+        try {
+          const res = await fetch('/api/chatkit/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (!res.ok) {
+            throw new Error('Failed to get client secret');
+          }
+          const { client_secret } = await res.json();
+          return client_secret;
+        } catch (err) {
+          console.error('[DosChat] Error getting client secret:', err);
+          setError('Authentication failed. Please refresh the page.');
+          throw err;
+        }
+      },
+      url: '/api/chatkit/backend',
+      domainKey: undefined,
+    },
+    onThreadChange: (event) => {
+      console.log('[DosChat] Thread changed:', event.threadId);
+      setCurrentThreadId(event.threadId);
+    },
+    onError: (event) => {
+      console.error('[DosChat] ChatKit error:', event);
+      setError(event.error?.message || 'An error occurred');
+    },
+  });
 
   // Update time every second
   useEffect(() => {
@@ -57,44 +83,23 @@ export default function DosChat() {
     }
   }, []);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingText]);
-
-  // Load conversation
-  const loadConversation = async (id: string) => {
-    try {
-      const response = await fetch(`/api/gpt/conversations/${id}`);
-      if (!response.ok) {
-        throw new Error('Failed to load conversation');
-      }
-
-      const data: Conversation = await response.json();
-      setConversation(data);
-      setMessages(data.messages);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversation');
-    }
-  };
-
   // Handle new chat
   const handleNewChat = () => {
-    setConversation(null);
-    setMessages([]);
+    setCurrentThreadId(null);
+    setThreadId(null); // ChatKit method to create new thread
     setError(null);
-    setStreamingText('');
   };
 
   // Handle conversation selection
   const handleSelectConversation = (id: string) => {
-    loadConversation(id);
+    setCurrentThreadId(id);
+    setThreadId(id); // ChatKit method to switch thread
+    setError(null);
   };
 
   // Handle conversation deletion
   const handleDeleteConversation = (id: string) => {
-    if (conversation?.id === id) {
+    if (currentThreadId === id) {
       handleNewChat();
     }
   };
@@ -121,136 +126,21 @@ export default function DosChat() {
     }
   };
 
-  // Send message with streaming
-  const handleSendMessage = async (
+  // Handle sending message via ChatKit
+  const handleSendMessage = (
     message: string,
     images: { data: string; mediaType: string }[]
   ) => {
-    if (isStreaming) return;
-
-    try {
-      setIsStreaming(true);
-      setError(null);
-      setStreamingText('');
-      setToolInUse(null);
-
-      // Add user message to UI immediately
-      const userMessageId = `temp-${Date.now()}`;
-      const userMessage: Message = {
-        id: userMessageId,
-        role: 'user',
-        content: [
-          { type: 'text', text: message },
-          ...images.map((img) => ({
-            type: 'image' as const,
-            source: {
-              type: 'base64' as const,
-              media_type: img.mediaType as any,
-              data: img.data,
-            },
-          })),
-        ],
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
-
-      // Create abort controller for cancellation
-      abortControllerRef.current = new AbortController();
-
-      // Send request
-      const response = await fetch('/api/gpt/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          conversationId: conversation?.id,
-          message,
-          images,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      // Process SSE stream
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulatedText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process complete SSE messages
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-
-          try {
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === 'content_block_delta' && data.delta?.text) {
-              accumulatedText += data.delta.text;
-              setStreamingText(accumulatedText);
-            } else if (data.type === 'tool_use') {
-              // Tool is being used
-              setToolInUse(data.tool_name);
-            } else if (data.type === 'message_stop') {
-              // Stream complete - add assistant message
-              const assistantMessage: Message = {
-                id: `msg-${Date.now()}`,
-                role: 'assistant',
-                content: [{ type: 'text', text: accumulatedText }],
-                timestamp: Date.now(),
-              };
-
-              setMessages((prev) => [...prev, assistantMessage]);
-              setStreamingText('');
-              setToolInUse(null);
-
-              // Update conversation ID if this was a new conversation
-              if (data.conversationId && !conversation) {
-                await loadConversation(data.conversationId);
-              }
-            } else if (data.type === 'error') {
-              throw new Error(data.error || 'Streaming error');
-            }
-          } catch (parseError) {
-            console.error('Error parsing SSE message:', parseError);
-          }
-        }
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        setError('Request cancelled');
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to send message');
-      }
-      setStreamingText('');
-    } finally {
-      setIsStreaming(false);
-      abortControllerRef.current = null;
-    }
-  };
-
-  // Cancel streaming
-  const handleCancelStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    sendUserMessage({
+      text: message,
+      attachments: images.map((img, idx) => ({
+        type: 'image' as const,
+        id: `img-${Date.now()}-${idx}`,
+        preview_url: `data:${img.mediaType};base64,${img.data}`,
+        name: `image-${idx}.jpg`,
+        mime_type: img.mediaType,
+      })),
+    });
   };
 
   const formatTime = (date: Date) => {
@@ -272,7 +162,7 @@ export default function DosChat() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <DosSidebar
-          currentConversationId={conversation?.id}
+          currentConversationId={currentThreadId || undefined}
           onSelectConversation={handleSelectConversation}
           onNewChat={handleNewChat}
           onDeleteConversation={handleDeleteConversation}
@@ -285,7 +175,7 @@ export default function DosChat() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-green-400 text-sm">
-                  ┌─ SESSION: {conversation?.title || 'NEW'} ─┐
+                  ┌─ SESSION: {currentThreadId ? 'ACTIVE' : 'NEW'} ─┐
                 </span>
                 <span className="text-green-400 text-xs">[{formatTime(currentTime)}]</span>
               </div>
@@ -318,119 +208,140 @@ export default function DosChat() {
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto dos-screen p-4 font-mono text-green-400">
+          {/* Messages Area with ChatKit */}
+          <div className="flex-1 overflow-y-auto dos-screen">
             {error && (
-              <div className="border border-red-500 p-2 mb-4 bg-red-900 bg-opacity-20">
-                <span className="text-red-400">
+              <div className="border border-red-500 p-2 m-4 mb-4 bg-red-900 bg-opacity-20">
+                <span className="text-red-400 font-mono">
                   *** ERROR: {error} ***
                 </span>
               </div>
             )}
 
-            {messages.length === 0 && !error && (
-              <div className="flex flex-col items-center justify-center h-full">
-                <pre className="text-center text-green-400 mb-4">
-{`╔═══════════════════════════════════════════════╗
-║                                               ║
-║     ██████╗██╗  ██╗ █████╗ ████████╗         ║
-║    ██╔════╝██║  ██║██╔══██╗╚══██╔══╝         ║
-║    ██║     ███████║███████║   ██║            ║
-║    ██║     ██╔══██║██╔══██║   ██║            ║
-║    ╚██████╗██║  ██║██║  ██║   ██║            ║
-║     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝            ║
-║                                               ║
-║    ██████╗ ██████╗ ████████╗                 ║
-║   ██╔════╝ ██╔══██╗╚══██╔══╝                 ║
-║   ██║  ███╗██████╔╝   ██║                    ║
-║   ██║   ██║██╔═══╝    ██║                    ║
-║   ╚██████╔╝██║        ██║                    ║
-║    ╚═════╝ ╚═╝        ╚═╝                    ║
-║                                               ║
-║        ARTIFICIAL INTELLIGENCE SYSTEM         ║
-║                                               ║
-╚═══════════════════════════════════════════════╝`}
-                </pre>
-                <div className="text-center space-y-2">
-                  <p>SYSTEM READY. AWAITING INPUT...</p>
-                  <p className="text-sm opacity-75">Type your query below</p>
-                </div>
-              </div>
-            )}
-
-            {messages.map((msg, idx) => (
-              <DosMessage key={msg.id} message={msg} index={idx} />
-            ))}
-
-            {/* Streaming Message */}
-            {isStreaming && streamingText && (
-              <div className="mb-4">
-                <div className="mb-1">
-                  <span className="text-yellow-400">&gt; CHATGPT:</span>
-                </div>
-                <div className="ml-4 whitespace-pre-wrap">
-                  {streamingText}
-                  <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
-                </div>
-              </div>
-            )}
-
-            {/* Tool Use Indicator */}
-            {toolInUse && (
-              <div className="mb-4 border border-cyan-500 p-2 bg-cyan-900 bg-opacity-10">
-                <div className="flex items-center gap-2">
-                  <span className="text-cyan-400">
-                    [EXEC] {toolInUse === 'get_calendar_events' ? 'CALENDAR.SYS' : toolInUse}
-                  </span>
-                  <span className="text-cyan-400 animate-pulse">...</span>
-                </div>
-                <div className="ml-4 text-xs text-cyan-300 mt-1">
-                  &gt; LOADING DATA FROM GOOGLE CALENDAR API
-                </div>
-              </div>
-            )}
-
-            {/* Loading indicator */}
-            {isStreaming && !streamingText && !toolInUse && (
-              <div className="mb-4">
-                <div className="mb-1">
-                  <span className="text-yellow-400">&gt; CHATGPT:</span>
-                </div>
-                <div className="ml-4">
-                  <span>PROCESSING</span>
-                  <span className="animate-pulse">...</span>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
+            {/* ChatKit Component with DOS Theme */}
+            <ChatKit
+              control={control}
+              className="chatkit-dos-theme"
+            />
           </div>
 
           {/* Input Area */}
           <div className="dos-input-area">
-            {isStreaming && (
-              <div className="px-4 py-2 border-t-2 border-yellow-500 bg-yellow-900 bg-opacity-20">
-                <div className="flex items-center justify-between font-mono text-yellow-400">
-                  <span className="text-sm">
-                    [STATUS: PROCESSING REQUEST...]
-                  </span>
-                  <button
-                    onClick={handleCancelStreaming}
-                    className="text-red-400 hover:text-red-300 font-bold px-2 border border-red-500"
-                  >
-                    [ABORT]
-                  </button>
-                </div>
-              </div>
-            )}
-
             <DosInput
               onSend={handleSendMessage}
-              disabled={isStreaming}
+              disabled={false}
             />
           </div>
         </div>
       </div>
+
+      {/* DOS Theme CSS Override for ChatKit */}
+      <style>{`
+        /* ChatKit DOS Theme Override */
+        :global(.chatkit-dos-theme) {
+          background: transparent !important;
+          color: #4ade80 !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+          height: 100% !important;
+        }
+
+        /* Override message containers */
+        :global(.chatkit-dos-theme [class*="message"]) {
+          background: transparent !important;
+          border: 1px solid #22c55e !important;
+          color: #4ade80 !important;
+          padding: 0.5rem !important;
+          margin-bottom: 1rem !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* User messages in cyan */
+        :global(.chatkit-dos-theme [data-role="user"]),
+        :global(.chatkit-dos-theme [class*="user"]) {
+          color: #67e8f9 !important;
+          border-color: #06b6d4 !important;
+        }
+
+        /* Assistant messages in yellow */
+        :global(.chatkit-dos-theme [data-role="assistant"]),
+        :global(.chatkit-dos-theme [class*="assistant"]) {
+          color: #fde047 !important;
+          border-color: #eab308 !important;
+        }
+
+        /* Composer styling */
+        :global(.chatkit-dos-theme [class*="composer"]) {
+          background: #000 !important;
+          border-top: 2px solid #22c55e !important;
+        }
+
+        :global(.chatkit-dos-theme [class*="composer"] input),
+        :global(.chatkit-dos-theme [class*="composer"] textarea) {
+          background: #000 !important;
+          color: #4ade80 !important;
+          border: 2px solid #22c55e !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Tool use indicators and progress */
+        :global(.chatkit-dos-theme [class*="progress"]),
+        :global(.chatkit-dos-theme [class*="tool"]) {
+          color: #22d3ee !important;
+          border: 1px solid #06b6d4 !important;
+          background: rgba(6, 182, 212, 0.1) !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Hide default header if present */
+        :global(.chatkit-dos-theme [class*="header"]) {
+          display: none !important;
+        }
+
+        /* Style thread container */
+        :global(.chatkit-dos-theme [class*="thread"]) {
+          background: transparent !important;
+          padding: 1rem !important;
+        }
+
+        /* Empty state styling */
+        :global(.chatkit-dos-theme [class*="empty"]),
+        :global(.chatkit-dos-theme [class*="start"]) {
+          color: #4ade80 !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Button styling */
+        :global(.chatkit-dos-theme button) {
+          background: #000 !important;
+          color: #4ade80 !important;
+          border: 1px solid #22c55e !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        :global(.chatkit-dos-theme button:hover) {
+          background: rgba(34, 197, 94, 0.2) !important;
+          border-color: #4ade80 !important;
+        }
+
+        /* Scrollbar styling */
+        :global(.chatkit-dos-theme ::-webkit-scrollbar) {
+          width: 8px;
+        }
+
+        :global(.chatkit-dos-theme ::-webkit-scrollbar-track) {
+          background: #000;
+          border-left: 1px solid #22c55e;
+        }
+
+        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb) {
+          background: #22c55e;
+          border: 1px solid #4ade80;
+        }
+
+        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb:hover) {
+          background: #4ade80;
+        }
+      `}</style>
     </div>
   );
 }
