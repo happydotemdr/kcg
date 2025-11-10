@@ -779,7 +779,6 @@ export async function streamChatCompletionWithTools(
       });
 
       let currentResponse: any = null;
-      let toolUsed = false;
 
       // Handle different event types
       stream.on('text', (text: string) => {
@@ -800,8 +799,6 @@ export async function streamChatCompletionWithTools(
       );
 
       if (toolUseBlocks.length > 0) {
-        toolUsed = true;
-
         // Process each tool use
         for (const toolBlock of toolUseBlocks) {
           const { id: toolUseId, name: toolName, input: toolInput } = toolBlock;

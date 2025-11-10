@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { Webhook } from 'svix';
 import { upsertUser, deleteUser } from '../../../lib/db/repositories/users';
 import { storeWebhookEvent } from '../../../lib/db/repositories/webhooks';
-import type { CreateUser, CreateClerkWebhookEvent } from '../../../lib/db/types';
+import type { CreateUser } from '../../../lib/db/types';
 
 export const prerender = false;
 

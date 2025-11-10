@@ -17,7 +17,7 @@ import type { CalendarEntityType } from '../../../lib/db/types';
 export const GET: APIRoute = async ({ locals }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
+    const auth = locals.auth();
     if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ locals }) => {
 export const POST: APIRoute = async ({ locals, request }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
+    const auth = locals.auth();
     if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

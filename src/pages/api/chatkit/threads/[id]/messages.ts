@@ -364,7 +364,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
             async (toolName: string, toolInput: any): Promise<boolean> => {
               if (hasError) return false;
 
-              const approvalId = `approval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const approvalId = `approval-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
               const timeoutMs = 30000;
 
               console.log('[ChatKit:POST /threads/:id/messages] Tool approval required:', toolName);

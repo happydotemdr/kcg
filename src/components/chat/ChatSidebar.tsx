@@ -87,12 +87,9 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="w-64 flex flex-col h-screen" style={{
-      background: 'var(--color-surface)',
-      borderRight: '1px solid var(--color-border)'
-    }}>
+    <div className="w-64 flex flex-col h-full bg-gray-50 border-r border-gray-200">
       {/* Header */}
-      <div className="p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      <div className="p-4 border-b border-gray-200">
         <button
           onClick={onNewChat}
           className="w-full px-4 py-2 font-medium flex items-center justify-center gap-2"

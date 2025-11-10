@@ -11,7 +11,7 @@ import { findUserByClerkId } from '../../../lib/db/repositories/users';
 export const GET: APIRoute = async ({ locals }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
+    const auth = locals.auth();
     if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

@@ -370,13 +370,12 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
-      {/* Unified Header */}
-      <div style={{ flexShrink: 0 }}>
-        <AppHeader currentPage="chat" />
-      </div>
+    <div className="h-full w-full grid bg-gray-50" style={{ gridTemplateRows: 'auto 1fr' }}>
+      {/* Header */}
+      <AppHeader currentPage="chat" />
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="grid overflow-hidden" style={{ gridTemplateColumns: 'auto 1fr auto' }}>
         {/* Sidebar */}
         <ChatSidebar
           currentConversationId={conversation?.id}
@@ -386,12 +385,9 @@ export default function Chat() {
         />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="grid overflow-hidden" style={{ gridTemplateRows: 'auto 1fr auto' }}>
           {/* Conversation Info Bar */}
-          <div className="px-6 py-3 flex items-center justify-between" style={{
-            background: 'var(--color-background)',
-            borderBottom: '1px solid var(--color-border)'
-          }}>
+          <div className="px-6 py-3 flex items-center justify-between bg-white border-b border-gray-200">
             <div className="flex-1">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
                 {conversation?.title || 'New Conversation'}
@@ -490,7 +486,7 @@ export default function Chat() {
           </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="overflow-y-auto">
           {error && (
             <div className="mx-6 mt-4 px-4 py-3" style={{
               background: 'var(--color-error-bg)',

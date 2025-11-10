@@ -9,9 +9,9 @@
 
 import type { APIRoute } from 'astro';
 import { v4 as uuidv4 } from 'uuid';
-import { createConversation } from '../../../lib/gpt-storage';
-import type { Conversation } from '../../../types/chat';
-import type { Thread } from '../../../types/chatkit-events';
+import { createConversation } from '../../../../lib/gpt-storage';
+import type { Conversation } from '../../../../types/chat';
+import type { Thread } from '../../../../types/chatkit-events';
 
 export const prerender = false;
 
