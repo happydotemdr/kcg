@@ -90,7 +90,7 @@ export default function DosChat() {
       url: '/api/chatkit',
     },
 
-    // ✅ ENABLE ChatKit's built-in composer with DOS theme styling
+    // ✅ Composer configuration - explicitly enable with custom settings
     composer: {
       placeholder: 'ENTER COMMAND...',
       attachments: {
@@ -99,6 +99,16 @@ export default function DosChat() {
           'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
         },
       },
+    },
+
+    // ✅ Explicitly enable history (threads list)
+    history: {
+      enabled: false, // We have custom sidebar, so disable built-in
+    },
+
+    // ✅ Explicitly disable header (we have custom AppHeader)
+    header: {
+      enabled: false,
     },
 
     // Event Handlers
@@ -366,6 +376,20 @@ export default function DosChat() {
     });
   };
 
+  // ✅ DEBUG: Log control object to see if composer is configured
+  useEffect(() => {
+    console.log('[DosChat] ChatKit control object:', control);
+    console.log('[DosChat] Composer config:', {
+      placeholder: 'ENTER COMMAND...',
+      attachments: {
+        enabled: true,
+        accept: {
+          'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+        },
+      },
+    });
+  }, [control]);
+
   return (
     <div className="dos-container flex h-screen relative overflow-hidden flex-col">
       {/* Unified Header */}
@@ -469,11 +493,12 @@ export default function DosChat() {
             </div>
           )}
 
-          {/* ChatKit Component - direct flex child that manages its own scrolling */}
-          <div className="flex-1 dos-screen" style={{ minHeight: 0 }}>
+          {/* ChatKit Component - ✅ CRITICAL: Use style prop for explicit height */}
+          <div className="flex-1 dos-screen" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <ChatKit
               control={control}
               className="chatkit-dos-theme"
+              style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}
             />
           </div>
         </div>
@@ -481,6 +506,13 @@ export default function DosChat() {
 
       {/* Global Theme CSS Override for ChatKit (Light mode: modern, Dark mode: DOS) */}
       <style>{`
+        /* ⚠️ TEMPORARY DEBUG MODE: Uncomment to disable ALL custom styling and see if composer appears */
+        /*
+        :global(.chatkit-dos-theme *) {
+          all: revert !important;
+        }
+        */
+
         /* ChatKit Theme Override - Adapts to light/dark */
         :global(.chatkit-dos-theme) {
           background: transparent !important;
@@ -679,16 +711,22 @@ export default function DosChat() {
           background: var(--color-text-light);
         }
 
-        /* Composer padding and visibility - fixed at bottom */
+        /* ✅ CRITICAL FIX: Composer MUST be visible and at bottom */
         :global(.chatkit-dos-theme [class*="composer"]) {
           padding: 1rem !important;
-          display: flex !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-          min-height: 60px !important;
           flex-shrink: 0 !important;
           position: relative !important;
           z-index: 10 !important;
+          /* ⚠️ DO NOT set display/visibility - let ChatKit manage it */
+        }
+
+        /* ✅ Force composer container to be visible if ChatKit is hiding it */
+        :global(.chatkit-dos-theme > div[class*="composer"]),
+        :global(.chatkit-dos-theme > [class*="composer"]),
+        :global(.chatkit-dos-theme [role="region"][class*="composer"]) {
+          display: flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         /* DOS Command Prompt - Dark mode only */
