@@ -7,7 +7,6 @@
  * Unauthenticated users are automatically redirected to /sign-in
  */
 import DosChat from '../components/gpt/DosChat';
-import { ThemeProvider } from '@lib/theme/ThemeContext';
 
 export const prerender = false;
 
@@ -38,10 +37,14 @@ const description = 'ChatGPT with a retro DOS command-line interface';
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
     <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
     <link rel="stylesheet" href="/src/styles/themes/dos-theme.css" />
+
+    <!-- Initialize theme store -->
+    <script>
+      import { initializeTheme } from '@lib/theme/themeStore';
+      initializeTheme();
+    </script>
   </head>
   <body class="m-0 p-0 overflow-hidden">
-    <ThemeProvider client:only="react">
-      <DosChat client:only="react" />
-    </ThemeProvider>
+    <DosChat client:only="react" />
   </body>
 </html>

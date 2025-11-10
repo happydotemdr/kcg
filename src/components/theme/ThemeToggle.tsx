@@ -5,11 +5,11 @@
  * Perfect for light-themed pages and navigation bars.
  */
 
-import React from 'react';
-import { useTheme, type Theme } from '@lib/theme/ThemeContext';
+import { useStore } from '@nanostores/react';
+import { themeAtom, setTheme, type Theme } from '@lib/theme/themeStore';
 
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const theme = useStore(themeAtom);
 
   const themes: Array<{ value: Theme; label: string; icon: string; ariaLabel: string }> = [
     {

@@ -6,22 +6,31 @@
 
 import type { APIRoute } from 'astro';
 import { getDocumentStats } from '../../../lib/db';
+import { findUserByClerkId } from '../../../lib/db/repositories/users';
 
 export const GET: APIRoute = async ({ locals }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
-    const userId = auth?.userId;
+    const { userId: clerkUserId } = locals.auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Get database user ID
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found in database' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Fetch document statistics
-    const stats = await getDocumentStats(userId);
+    const stats = await getDocumentStats(dbUser.id);
 
     return new Response(JSON.stringify(stats), {
       status: 200,

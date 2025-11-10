@@ -5,11 +5,12 @@
  * Perfect for dark-themed pages and retro interfaces.
  */
 
-import React from 'react';
-import { useTheme } from '@lib/theme/ThemeContext';
+import { useStore } from '@nanostores/react';
+import { themeAtom, resolvedThemeAtom, setTheme } from '@lib/theme/themeStore';
 
 export default function DosThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const theme = useStore(themeAtom);
+  const resolvedTheme = useStore(resolvedThemeAtom);
 
   // In DOS mode, we toggle between light and dark
   // System preference less common in retro terminals

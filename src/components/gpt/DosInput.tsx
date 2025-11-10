@@ -63,24 +63,23 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
   };
 
   return (
-    <div className="border-t-2 border-green-500 p-4 bg-black">
+    <div className="dos-input-container border-t-2 border-green-500 p-4">
       {/* Image Preview */}
       {images.length > 0 && (
         <div className="mb-2 flex gap-2 flex-wrap">
           {images.map((img, idx) => (
             <div
               key={idx}
-              className="relative border border-green-500 p-1"
+              className="dos-image-preview relative border border-green-500 p-1"
             >
               <img
                 src={`data:${img.mediaType};base64,${img.data}`}
                 alt="Upload preview"
-                className="w-16 h-16 object-cover"
-                style={{ filter: 'contrast(1.2) brightness(0.9)' }}
+                className="w-16 h-16 object-cover dos-preview-image"
               />
               <button
                 onClick={() => removeImage(idx)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs font-bold border border-red-700"
+                className="dos-remove-button absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs font-bold border border-red-700"
               >
                 X
               </button>
@@ -92,7 +91,7 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
       {/* Input Area */}
       <div className="flex items-end gap-2">
         {/* DOS Prompt */}
-        <div className="text-green-400 font-mono text-lg pb-2">
+        <div className="dos-prompt text-green-400 font-mono text-lg pb-2">
           C:\&gt;
         </div>
 
@@ -105,7 +104,7 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
             disabled={disabled}
             placeholder="ENTER COMMAND..."
             rows={1}
-            className="w-full bg-black text-green-400 font-mono text-base border-2 border-green-500 p-2 resize-none focus:outline-none focus:border-green-300 placeholder-green-700 disabled:opacity-50"
+            className="dos-textarea w-full bg-black text-green-400 font-mono text-base border-2 border-green-500 p-2 resize-none focus:outline-none focus:border-green-300 placeholder-green-700 disabled:opacity-50"
             style={{
               minHeight: '40px',
               maxHeight: '120px',
@@ -119,7 +118,7 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="bg-blue-900 text-blue-300 font-mono px-3 py-2 border-2 border-blue-500 hover:bg-blue-800 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="dos-button dos-button-image bg-blue-900 text-blue-300 font-mono px-3 py-2 border-2 border-blue-500 hover:bg-blue-800 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Upload Image"
           >
             [IMG]
@@ -129,7 +128,7 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
           <button
             onClick={handleSubmit}
             disabled={disabled || !message.trim()}
-            className="bg-green-900 text-green-300 font-mono px-4 py-2 border-2 border-green-500 hover:bg-green-800 hover:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="dos-button dos-button-send bg-green-900 text-green-300 font-mono px-4 py-2 border-2 border-green-500 hover:bg-green-800 hover:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             [SEND]
           </button>
@@ -147,7 +146,7 @@ export default function DosInput({ onSend, disabled }: DosInputProps) {
       </div>
 
       {/* Instructions */}
-      <div className="mt-2 text-green-700 text-xs font-mono">
+      <div className="dos-instructions mt-2 text-green-700 text-xs font-mono">
         Press ENTER to send • SHIFT+ENTER for new line
       </div>
     </div>

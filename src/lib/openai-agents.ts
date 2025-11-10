@@ -395,20 +395,29 @@ export async function runAgentWithStreaming(
       // Process streaming events with correct event types
       for await (const event of streamedResult) {
         // Handle raw model text streaming
+        // ✅ FIXED: Match Context7 docs for text delta extraction
         if (event.type === 'raw_model_stream_event') {
           const data = event.data as any;
-          // Text delta streaming
-          if (data.type === 'content.delta' && data.delta) {
+          // Primary format from Context7: event.delta.text
+          if (event.delta && typeof event.delta === 'object' && 'text' in event.delta) {
+            const textDelta = (event.delta as any).text;
+            if (textDelta) {
+              accumulatedText += textDelta;
+              onText(textDelta);
+              console.log('[Agents SDK] Text delta (primary):', textDelta.substring(0, 50));
+            }
+          }
+          // Fallback formats for compatibility
+          else if (data.type === 'content.delta' && data.delta) {
             const textDelta = data.delta;
             accumulatedText += textDelta;
             onText(textDelta);
-            console.log('[Agents SDK] Text delta:', textDelta.substring(0, 50));
+            console.log('[Agents SDK] Text delta (fallback 1):', textDelta.substring(0, 50));
           }
-          // Alternative text streaming format
           else if (data.type === 'text_stream' && data.text) {
             accumulatedText += data.text;
             onText(data.text);
-            console.log('[Agents SDK] Text stream:', data.text.substring(0, 50));
+            console.log('[Agents SDK] Text stream (fallback 2):', data.text.substring(0, 50));
           }
         }
 

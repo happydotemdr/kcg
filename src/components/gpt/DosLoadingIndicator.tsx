@@ -4,6 +4,8 @@
  */
 
 import React from 'react';
+import { useStore } from '@nanostores/react';
+import { resolvedThemeAtom } from '@lib/theme/themeStore';
 
 export type LoadingState = 'thinking' | 'executing_tool' | 'streaming';
 
@@ -18,15 +20,17 @@ export default function DosLoadingIndicator({
   toolName,
   toolStatus = 'EXECUTING'
 }: DosLoadingIndicatorProps) {
+  const resolvedTheme = useStore(resolvedThemeAtom);
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'dark-pro';
 
   const renderContent = () => {
     switch (state) {
       case 'thinking':
         return (
           <div className="flex items-center gap-2">
-            <span className="text-cyan-400">[AI]</span>
-            <span className="text-green-400">PROCESSING</span>
-            <span className="animate-blink text-green-400">_</span>
+            <span className={isDark ? 'text-cyan-400' : 'text-indigo-600'}>[AI]</span>
+            <span className={isDark ? 'text-green-400' : 'text-gray-700'}>{isDark ? 'PROCESSING' : 'Processing'}</span>
+            <span className={`animate-blink ${isDark ? 'text-green-400' : 'text-gray-700'}`}>_</span>
           </div>
         );
 
@@ -34,14 +38,14 @@ export default function DosLoadingIndicator({
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-yellow-400">⚙</span>
-              <span className="text-yellow-400">{toolStatus.toUpperCase()}:</span>
-              <span className="text-cyan-400 font-mono">{toolName || 'unknown'}</span>
+              <span className={isDark ? 'text-yellow-400' : 'text-amber-600'}>⚙</span>
+              <span className={isDark ? 'text-yellow-400' : 'text-amber-600'}>{isDark ? toolStatus.toUpperCase() : toolStatus}:</span>
+              <span className={isDark ? 'text-cyan-400 font-mono' : 'text-indigo-600'}>{toolName || 'unknown'}</span>
             </div>
             <div className="flex items-center gap-1 pl-4">
-              <span className="text-green-400">└─</span>
-              <span className="text-green-400 text-xs">Please wait</span>
-              <span className="animate-blink text-green-400">_</span>
+              <span className={isDark ? 'text-green-400' : 'text-gray-600'}>{isDark ? '└─' : '→'}</span>
+              <span className={`text-xs ${isDark ? 'text-green-400' : 'text-gray-600'}`}>{isDark ? 'Please wait' : 'Please wait'}</span>
+              <span className={`animate-blink ${isDark ? 'text-green-400' : 'text-gray-600'}`}>_</span>
             </div>
           </div>
         );
@@ -49,9 +53,9 @@ export default function DosLoadingIndicator({
       case 'streaming':
         return (
           <div className="flex items-center gap-2">
-            <span className="text-green-500">►</span>
-            <span className="text-green-400">STREAMING</span>
-            <span className="animate-pulse text-green-400">...</span>
+            <span className={isDark ? 'text-green-500' : 'text-indigo-600'}>►</span>
+            <span className={isDark ? 'text-green-400' : 'text-gray-700'}>{isDark ? 'STREAMING' : 'Streaming'}</span>
+            <span className={`animate-pulse ${isDark ? 'text-green-400' : 'text-gray-700'}`}>...</span>
           </div>
         );
 
@@ -61,12 +65,18 @@ export default function DosLoadingIndicator({
   };
 
   return (
-    <div className="dos-loading-indicator p-3 border-2 border-green-500 bg-black bg-opacity-80 font-mono text-sm">
+    <div className={`dos-loading-indicator p-3 text-sm ${
+      isDark
+        ? 'border-2 border-green-500 bg-black bg-opacity-80 font-mono'
+        : 'border border-gray-300 bg-gray-50 rounded'
+    }`}>
       <div className="relative">
-        {/* Scanline effect overlay */}
-        <div className="absolute inset-0 pointer-events-none opacity-20" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(34, 197, 94, 0.1) 2px, rgba(34, 197, 94, 0.1) 4px)',
-        }}></div>
+        {/* Scanline effect overlay - Dark mode only */}
+        {isDark && (
+          <div className="absolute inset-0 pointer-events-none opacity-20" style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(34, 197, 94, 0.1) 2px, rgba(34, 197, 94, 0.1) 4px)',
+          }}></div>
+        )}
 
         {/* Content */}
         <div className="relative z-10">

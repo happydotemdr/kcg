@@ -4,7 +4,6 @@ import GoogleAds from '@components/analytics/GoogleAds.astro';
 import MetaPixel from '@components/analytics/MetaPixel.astro';
 import TwitterPixel from '@components/analytics/TwitterPixel.astro';
 import NavigationAuth from '@components/NavigationAuth';
-import { ThemeProvider } from '@lib/theme/ThemeContext';
 import ThemeToggle from '@components/theme/ThemeToggle';
 
 interface Props {
@@ -41,6 +40,12 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       })();
     </script>
 
+    <!-- Initialize theme store -->
+    <script>
+      import { initializeTheme } from '@lib/theme/themeStore';
+      initializeTheme();
+    </script>
+
     <!-- Theme Styles -->
     <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
     <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
@@ -72,24 +77,22 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <TwitterPixel />
   </head>
   <body>
-    <ThemeProvider client:only="react">
-      <nav class="main-nav">
-        <div class="nav-container">
-          <a href="/" class="nav-logo">
-            <span class="logo-text">Keep Choosing Good</span>
-          </a>
+    <nav class="main-nav">
+      <div class="nav-container">
+        <a href="/" class="nav-logo">
+          <span class="logo-text">Keep Choosing Good</span>
+        </a>
 
-          <div class="nav-actions">
-            <ThemeToggle client:only="react" />
-            <NavigationAuth isInNav={true} client:only="react" />
-          </div>
+        <div class="nav-actions">
+          <ThemeToggle client:only="react" />
+          <NavigationAuth isInNav={true} client:only="react" />
         </div>
-      </nav>
+      </div>
+    </nav>
 
-      <main class="main-content">
-        <slot />
-      </main>
-    </ThemeProvider>
+    <main class="main-content">
+      <slot />
+    </main>
   </body>
 </html>
 

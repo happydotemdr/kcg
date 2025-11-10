@@ -5,10 +5,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
-import DosInput from './DosInput';
+import { useStore } from '@nanostores/react';
+import { resolvedThemeAtom } from '@lib/theme/themeStore';
+// import DosInput from './DosInput'; // ✅ REMOVED: Using ChatKit's built-in composer
 import DosSidebar from './DosSidebar';
 import AppHeader from '../AppHeader';
-import DosLoadingIndicator, { type LoadingState } from './DosLoadingIndicator';
+import DosLoadingIndicator from './DosLoadingIndicator';
 import ToolApprovalModal from './ToolApprovalModal';
 
 export default function DosChat() {
@@ -18,6 +20,8 @@ export default function DosChat() {
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [tokenExpiresAt, setTokenExpiresAt] = useState<string | null>(null);
   const [tokenWarning, setTokenWarning] = useState<boolean>(false);
+  const resolvedTheme = useStore(resolvedThemeAtom);
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'dark-pro';
 
   // Progress indicator state
   const [isResponding, setIsResponding] = useState<boolean>(false);
@@ -37,7 +41,7 @@ export default function DosChat() {
   // Initialize ChatKit
   const { control, setThreadId, sendUserMessage } = useChatKit({
     api: {
-      async getClientSecret(existingSecret?: string) {
+      async getClientSecret(existingSecret: string | null) {
         try {
           // If we have an existing secret, try to refresh it
           if (existingSecret) {
@@ -82,7 +86,19 @@ export default function DosChat() {
           throw err;
         }
       },
-      url: '/api/chatkit/backend',
+      // ✅ CRITICAL FIX: Use base URL for ChatKit threads API
+      url: '/api/chatkit/threads',
+    },
+
+    // ✅ ENABLE ChatKit's built-in composer with DOS theme styling
+    composer: {
+      placeholder: 'ENTER COMMAND...',
+      attachments: {
+        enabled: true,
+        accept: {
+          'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+        },
+      },
     },
 
     // Event Handlers
@@ -123,10 +139,10 @@ export default function DosChat() {
 
       // Handle tool approval requests from SSE stream
       if (event.name === 'tool_approval_requested' || event.data?.type === 'tool_approval_requested') {
-        const data = event.data || event;
+        const data = (event.data || event) as any;
         setPendingApproval({
-          approvalId: data.approval_id,
-          toolName: data.tool_name,
+          approvalId: data.approval_id || '',
+          toolName: data.tool_name || '',
           toolArguments: data.tool_arguments || {},
           timeoutMs: data.timeout_ms || 30000,
         });
@@ -134,8 +150,9 @@ export default function DosChat() {
 
       // Track tool execution progress
       if (event.name === 'progress' || event.name === 'tool.execute') {
-        const toolName = event.data?.tool_name || event.data?.toolName || 'unknown';
-        const status = event.data?.status || 'EXECUTING';
+        const data = event.data as any;
+        const toolName = data?.tool_name || data?.toolName || 'unknown';
+        const status = data?.status || 'EXECUTING';
         setCurrentToolExecution({ toolName, status });
       }
 
@@ -225,7 +242,8 @@ export default function DosChat() {
   const handleApprove = async (approvalId: string) => {
     console.log('[DosChat] Approving tool:', approvalId);
     try {
-      const response = await fetch('/api/chatkit/approve', {
+      // ✅ FIXED: Use ChatKit protocol actions endpoint
+      const response = await fetch(`/api/chatkit/threads/${currentThreadId}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_id: approvalId, approved: true }),
@@ -247,7 +265,8 @@ export default function DosChat() {
   const handleReject = async (approvalId: string) => {
     console.log('[DosChat] Rejecting tool:', approvalId);
     try {
-      const response = await fetch('/api/chatkit/approve', {
+      // ✅ FIXED: Use ChatKit protocol actions endpoint
+      const response = await fetch(`/api/chatkit/threads/${currentThreadId}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_id: approvalId, approved: false }),
@@ -337,22 +356,7 @@ export default function DosChat() {
     }
   };
 
-  // Handle sending message via ChatKit
-  const handleSendMessage = (
-    message: string,
-    images: { data: string; mediaType: string }[]
-  ) => {
-    sendUserMessage({
-      text: message,
-      attachments: images.map((img, idx) => ({
-        type: 'image' as const,
-        id: `img-${Date.now()}-${idx}`,
-        preview_url: `data:${img.mediaType};base64,${img.data}`,
-        name: `image-${idx}.jpg`,
-        mime_type: img.mediaType,
-      })),
-    });
-  };
+  // ✅ REMOVED: handleSendMessage - ChatKit composer handles this automatically
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
@@ -363,9 +367,11 @@ export default function DosChat() {
   };
 
   return (
-    <div className="dos-container flex h-screen bg-black relative overflow-hidden flex-col">
-      {/* Unified DOS Header */}
-      <AppHeader theme="dos" currentPage="chatgpt" />
+    <div className="dos-container flex h-screen relative overflow-hidden flex-col">
+      {/* Unified Header */}
+      <div style={{ flexShrink: 0 }}>
+        <AppHeader currentPage="chatgpt" />
+      </div>
 
       {/* CRT Scanlines Effect */}
       <div className="dos-scanlines pointer-events-none"></div>
@@ -382,16 +388,21 @@ export default function DosChat() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col relative">
           {/* Session Info Bar */}
-          <div className="border-b-2 border-green-500 p-2 font-mono bg-black">
+          <div className={`dos-session-bar p-2 ${isDark ? 'border-b-2 border-green-500 font-mono' : 'border-b border-gray-200'}`}>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <span className="text-green-400 text-sm">
-                  ┌─ SESSION: {currentThreadId ? 'ACTIVE' : 'NEW'} ─┐
+                <span className={`text-sm ${isDark ? 'text-green-400' : 'text-gray-700'}`}>
+                  {isDark
+                    ? `┌─ SESSION: ${currentThreadId ? 'ACTIVE' : 'NEW'} ─┐`
+                    : `Session: ${currentThreadId ? 'Active' : 'New'}`
+                  }
                 </span>
-                <span className="text-green-400 text-xs">[{formatTime(currentTime)}]</span>
+                <span className={`text-xs ${isDark ? 'text-green-400' : 'text-gray-500'}`}>
+                  {isDark ? `[${formatTime(currentTime)}]` : formatTime(currentTime)}
+                </span>
                 {tokenWarning && (
-                  <span className="text-yellow-400 text-xs animate-pulse">
-                    [⚠ TOKEN EXPIRING SOON]
+                  <span className={`text-xs animate-pulse ${isDark ? 'text-yellow-400' : 'text-amber-600'}`}>
+                    {isDark ? '[⚠ TOKEN EXPIRING SOON]' : '⚠ Token expiring soon'}
                   </span>
                 )}
               </div>
@@ -400,24 +411,32 @@ export default function DosChat() {
                 {calendarConnected ? (
                 <div className="flex items-center gap-2">
                   <button
-                    className="text-xs text-green-400 border border-green-500 px-2 py-0.5 hover:bg-green-900 hover:bg-opacity-20"
+                    className={`text-xs px-2 py-0.5 ${
+                      isDark
+                        ? 'text-green-400 border border-green-500 hover:bg-green-900 hover:bg-opacity-20'
+                        : 'text-green-700 border border-green-500 bg-green-50 rounded'
+                    }`}
                     disabled
                   >
-                    [√] CALENDAR.SYS
+                    {isDark ? '[√] CALENDAR.SYS' : '✓ Calendar Connected'}
                   </button>
                   <button
                     onClick={handleDisconnectCalendar}
-                    className="text-xs text-yellow-400 hover:text-yellow-300 underline"
+                    className={`text-xs ${isDark ? 'text-yellow-400 hover:text-yellow-300 underline' : 'text-amber-600 hover:text-amber-700 underline'}`}
                   >
-                    [UNLOAD]
+                    {isDark ? '[UNLOAD]' : 'Disconnect'}
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={handleConnectCalendar}
-                  className="text-xs text-yellow-400 border border-yellow-500 px-2 py-0.5 hover:bg-yellow-900 hover:bg-opacity-20"
+                  className={`text-xs px-2 py-0.5 ${
+                    isDark
+                      ? 'text-yellow-400 border border-yellow-500 hover:bg-yellow-900 hover:bg-opacity-20'
+                      : 'text-amber-600 border border-amber-500 bg-amber-50 rounded hover:bg-amber-100'
+                  }`}
                 >
-                  [LOAD CALENDAR.SYS]
+                  {isDark ? '[LOAD CALENDAR.SYS]' : 'Connect Calendar'}
                 </button>
               )}
               </div>
@@ -451,34 +470,37 @@ export default function DosChat() {
               </div>
             )}
 
-            {/* ChatKit Component with DOS Theme */}
+            {/* ChatKit Component with DOS Theme (includes built-in composer) */}
             <ChatKit
               control={control}
               className="chatkit-dos-theme"
             />
           </div>
-          {/* Input Area */}
-          <div className="dos-input-area">
-            <DosInput
-              onSend={handleSendMessage}
-              disabled={false}
-            />
-          </div>
         </div>
       </div>
 
-      {/* DOS Theme CSS Override for ChatKit */}
+      {/* Global Theme CSS Override for ChatKit (Light mode: modern, Dark mode: DOS) */}
       <style>{`
-        /* ChatKit DOS Theme Override */
+        /* ChatKit Theme Override - Adapts to light/dark */
         :global(.chatkit-dos-theme) {
           background: transparent !important;
-          color: #4ade80 !important;
-          font-family: 'IBM Plex Mono', monospace !important;
           height: 100% !important;
         }
 
-        /* Override message containers */
-        :global(.chatkit-dos-theme [class*="message"]) {
+        /* Light mode: Modern styling */
+        :global([data-theme="light"] .chatkit-dos-theme) {
+          color: var(--color-text) !important;
+          font-family: var(--font-family-base) !important;
+        }
+
+        /* Dark mode: DOS styling */
+        :global([data-theme="dark"] .chatkit-dos-theme) {
+          color: #4ade80 !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Message containers - Dark mode DOS style */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="message"]) {
           background: transparent !important;
           border: 1px solid #22c55e !important;
           color: #4ade80 !important;
@@ -487,41 +509,89 @@ export default function DosChat() {
           font-family: 'IBM Plex Mono', monospace !important;
         }
 
-        /* User messages in cyan */
-        :global(.chatkit-dos-theme [data-role="user"]),
-        :global(.chatkit-dos-theme [class*="user"]) {
+        /* Message containers - Light mode modern style */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="message"]) {
+          background: var(--color-surface) !important;
+          border: 1px solid var(--color-border) !important;
+          color: var(--color-text) !important;
+          padding: 0.75rem !important;
+          margin-bottom: 1rem !important;
+          border-radius: var(--radius-md) !important;
+        }
+
+        /* User messages - Dark mode cyan */
+        :global([data-theme="dark"] .chatkit-dos-theme [data-role="user"]),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="user"]) {
           color: #67e8f9 !important;
           border-color: #06b6d4 !important;
         }
 
-        /* Assistant messages in yellow */
-        :global(.chatkit-dos-theme [data-role="assistant"]),
-        :global(.chatkit-dos-theme [class*="assistant"]) {
+        /* User messages - Light mode primary color */
+        :global([data-theme="light"] .chatkit-dos-theme [data-role="user"]),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="user"]) {
+          color: var(--color-primary) !important;
+          border-color: var(--color-primary) !important;
+          background: var(--color-info-bg) !important;
+        }
+
+        /* Assistant messages - Dark mode yellow */
+        :global([data-theme="dark"] .chatkit-dos-theme [data-role="assistant"]),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="assistant"]) {
           color: #fde047 !important;
           border-color: #eab308 !important;
         }
 
-        /* Composer styling */
-        :global(.chatkit-dos-theme [class*="composer"]) {
+        /* Assistant messages - Light mode secondary color */
+        :global([data-theme="light"] .chatkit-dos-theme [data-role="assistant"]),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="assistant"]) {
+          color: var(--color-text) !important;
+          border-color: var(--color-border) !important;
+        }
+
+        /* Composer styling - Dark mode DOS */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"]) {
           background: #000 !important;
           border-top: 2px solid #22c55e !important;
         }
 
-        :global(.chatkit-dos-theme [class*="composer"] input),
-        :global(.chatkit-dos-theme [class*="composer"] textarea) {
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] input),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] textarea) {
           background: #000 !important;
           color: #4ade80 !important;
           border: 2px solid #22c55e !important;
           font-family: 'IBM Plex Mono', monospace !important;
         }
 
-        /* Tool use indicators and progress */
-        :global(.chatkit-dos-theme [class*="progress"]),
-        :global(.chatkit-dos-theme [class*="tool"]) {
+        /* Composer styling - Light mode modern */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"]) {
+          background: var(--color-surface) !important;
+          border-top: 1px solid var(--color-border) !important;
+        }
+
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] input),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] textarea) {
+          background: var(--color-background) !important;
+          color: var(--color-text) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: var(--radius-md) !important;
+        }
+
+        /* Tool use indicators - Dark mode */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="progress"]),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="tool"]) {
           color: #22d3ee !important;
           border: 1px solid #06b6d4 !important;
           background: rgba(6, 182, 212, 0.1) !important;
           font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Tool use indicators - Light mode */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="progress"]),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="tool"]) {
+          color: var(--color-info) !important;
+          border: 1px solid var(--color-info) !important;
+          background: var(--color-info-bg) !important;
+          border-radius: var(--radius-md) !important;
         }
 
         /* Hide default header if present */
@@ -542,36 +612,145 @@ export default function DosChat() {
           font-family: 'IBM Plex Mono', monospace !important;
         }
 
-        /* Button styling */
-        :global(.chatkit-dos-theme button) {
+        /* Button styling - Dark mode DOS */
+        :global([data-theme="dark"] .chatkit-dos-theme button) {
           background: #000 !important;
           color: #4ade80 !important;
           border: 1px solid #22c55e !important;
           font-family: 'IBM Plex Mono', monospace !important;
         }
 
-        :global(.chatkit-dos-theme button:hover) {
+        :global([data-theme="dark"] .chatkit-dos-theme button:hover) {
           background: rgba(34, 197, 94, 0.2) !important;
           border-color: #4ade80 !important;
         }
 
-        /* Scrollbar styling */
-        :global(.chatkit-dos-theme ::-webkit-scrollbar) {
-          width: 8px;
+        /* Button styling - Light mode modern */
+        :global([data-theme="light"] .chatkit-dos-theme button) {
+          background: var(--color-primary) !important;
+          color: var(--color-background) !important;
+          border: 1px solid var(--color-primary) !important;
+          border-radius: var(--radius-md) !important;
         }
 
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-track) {
+        :global([data-theme="light"] .chatkit-dos-theme button:hover) {
+          background: var(--color-primary-dark) !important;
+        }
+
+        /* Scrollbar styling - Dark mode */
+        :global([data-theme="dark"] .chatkit-dos-theme ::-webkit-scrollbar) {
+          width: 12px;
+        }
+
+        :global([data-theme="dark"] .chatkit-dos-theme ::-webkit-scrollbar-track) {
           background: #000;
           border-left: 1px solid #22c55e;
         }
 
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb) {
+        :global([data-theme="dark"] .chatkit-dos-theme ::-webkit-scrollbar-thumb) {
           background: #22c55e;
           border: 1px solid #4ade80;
         }
 
-        :global(.chatkit-dos-theme ::-webkit-scrollbar-thumb:hover) {
+        :global([data-theme="dark"] .chatkit-dos-theme ::-webkit-scrollbar-thumb:hover) {
           background: #4ade80;
+        }
+
+        /* Scrollbar styling - Light mode */
+        :global([data-theme="light"] .chatkit-dos-theme ::-webkit-scrollbar) {
+          width: 8px;
+        }
+
+        :global([data-theme="light"] .chatkit-dos-theme ::-webkit-scrollbar-track) {
+          background: var(--color-surface);
+        }
+
+        :global([data-theme="light"] .chatkit-dos-theme ::-webkit-scrollbar-thumb) {
+          background: var(--color-border);
+          border-radius: var(--radius-sm);
+        }
+
+        :global([data-theme="light"] .chatkit-dos-theme ::-webkit-scrollbar-thumb:hover) {
+          background: var(--color-text-light);
+        }
+
+        /* Composer padding */
+        :global(.chatkit-dos-theme [class*="composer"]) {
+          padding: 1rem !important;
+        }
+
+        /* DOS Command Prompt - Dark mode only */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"]::before) {
+          content: 'C:\\>';
+          color: #4ade80;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 1.125rem;
+          margin-right: 0.5rem;
+          font-weight: bold;
+        }
+
+        /* Placeholder - Dark mode */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] input::placeholder),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] textarea::placeholder) {
+          color: #16a34a !important;
+          opacity: 0.6;
+          text-transform: uppercase;
+        }
+
+        /* Placeholder - Light mode */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] input::placeholder),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] textarea::placeholder) {
+          color: var(--color-text-light) !important;
+          text-transform: none;
+        }
+
+        /* Send button - Dark mode DOS */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] [class*="send"]),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] [type="submit"]) {
+          background: #15803d !important;
+          color: #4ade80 !important;
+          border: 2px solid #22c55e !important;
+          padding: 0.5rem 1rem !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+          text-transform: uppercase;
+          font-weight: bold;
+        }
+
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] [class*="send"]:hover),
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] [type="submit"]:hover) {
+          background: #16a34a !important;
+          border-color: #4ade80 !important;
+        }
+
+        /* Send button - Light mode modern */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] [class*="send"]),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] [type="submit"]) {
+          background: var(--color-primary) !important;
+          color: var(--color-background) !important;
+          border: 1px solid var(--color-primary) !important;
+          padding: 0.5rem 1rem !important;
+          border-radius: var(--radius-md) !important;
+        }
+
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] [class*="send"]:hover),
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] [type="submit"]:hover) {
+          background: var(--color-primary-dark) !important;
+        }
+
+        /* Attachment button - Dark mode */
+        :global([data-theme="dark"] .chatkit-dos-theme [class*="composer"] [class*="attach"]) {
+          background: #1e40af !important;
+          color: #60a5fa !important;
+          border: 2px solid #3b82f6 !important;
+          font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        /* Attachment button - Light mode */
+        :global([data-theme="light"] .chatkit-dos-theme [class*="composer"] [class*="attach"]) {
+          background: var(--color-info) !important;
+          color: var(--color-background) !important;
+          border: 1px solid var(--color-info) !important;
+          border-radius: var(--radius-md) !important;
         }
       `}</style>
 
