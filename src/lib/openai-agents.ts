@@ -333,6 +333,7 @@ export function createGPTAgent(userId: string, systemPrompt?: string): Agent {
         name: 'delete_calendar_event',
         description: 'Deletes an event from the user\'s Google Calendar. Use this when the user wants to cancel, remove, or delete an event. You must first retrieve the event to get its ID. Always confirm the event details with the user before deleting.',
         parameters: deleteCalendarEventSchema,
+        needsApproval: true, // Require human approval for deletion
         execute: async (input: z.infer<typeof deleteCalendarEventSchema>) => {
           return await executeDeleteCalendarEvent(input, userId);
         },
@@ -352,6 +353,8 @@ export function createGPTAgent(userId: string, systemPrompt?: string): Agent {
  *
  * This function executes the agent and streams responses back via callbacks.
  * It handles tool execution automatically via the Agents SDK.
+ * Uses the correct Runner.run() pattern with proper event types.
+ * Supports human-in-the-loop tool approval via onToolApproval callback.
  */
 export async function runAgentWithStreaming(
   agent: Agent,
@@ -360,7 +363,8 @@ export async function runAgentWithStreaming(
   onText: (text: string) => void,
   onToolUse: (toolName: string, toolInput: any) => void,
   onComplete: (fullText: string) => void,
-  onError: (error: Error) => void
+  onError: (error: Error) => void,
+  onToolApproval?: (toolName: string, toolInput: any) => Promise<boolean> // Returns true if approved
 ): Promise<void> {
   console.log('[Agents SDK] Starting agent execution with', messages.length, 'messages');
 
@@ -368,64 +372,172 @@ export async function runAgentWithStreaming(
     // Convert Message[] to simple string for agent input
     // The agent will handle the conversation internally
     const latestUserMessage = messages[messages.length - 1];
-    const userInput = latestUserMessage.content
+    let userInput: any = latestUserMessage.content
       .filter(block => block.type === 'text')
       .map(block => (block as any).text)
       .join(' ');
 
     console.log('[Agents SDK] User input:', userInput);
 
-    // Run agent with streaming
-    const streamedResult = await run(agent, userInput, {
-      maxTurns: 5, // Prevent infinite loops
-      stream: true,
-    });
+    let accumulatedText = '';
+    let continueExecution = true;
 
-    console.log('[Agents SDK] Processing stream events');
+    // Main execution loop (handles interruptions/approvals)
+    while (continueExecution) {
+      // Run agent with streaming using correct pattern
+      const streamedResult = await run(agent, userInput, {
+        maxTurns: 5, // Prevent infinite loops
+        stream: true,
+      });
 
-    // Process streaming events
-    for await (const event of streamedResult) {
-      if (event.type === 'run_item_stream_event') {
-        console.log('[Agents SDK] Stream event:', event.name);
+      console.log('[Agents SDK] Processing stream events');
 
-        // Handle tool calls
-        if (event.name === 'tool_called') {
-          const toolCall = event.item as any;
-          console.log('[Agents SDK] Tool call detected:', toolCall);
-          if (toolCall.toolName) {
-            onToolUse(toolCall.toolName, toolCall.input || {});
+      // Process streaming events with correct event types
+      for await (const event of streamedResult) {
+        // Handle raw model text streaming
+        if (event.type === 'raw_model_stream_event') {
+          const data = event.data as any;
+          // Text delta streaming
+          if (data.type === 'content.delta' && data.delta) {
+            const textDelta = data.delta;
+            accumulatedText += textDelta;
+            onText(textDelta);
+            console.log('[Agents SDK] Text delta:', textDelta.substring(0, 50));
+          }
+          // Alternative text streaming format
+          else if (data.type === 'text_stream' && data.text) {
+            accumulatedText += data.text;
+            onText(data.text);
+            console.log('[Agents SDK] Text stream:', data.text.substring(0, 50));
           }
         }
 
-        // Handle message output
-        if (event.name === 'message_output_created') {
-          const messageItem = event.item as any;
-          if (messageItem.content) {
-            const textContent = typeof messageItem.content === 'string'
-              ? messageItem.content
-              : JSON.stringify(messageItem.content);
-            console.log('[Agents SDK] Message output:', textContent.substring(0, 100));
-            onText(textContent);
+        // Handle agent handoffs
+        else if (event.type === 'agent_updated_stream_event') {
+          console.log('[Agents SDK] Agent updated:', event.agent?.name);
+        }
+
+        // Handle run items (tool calls, outputs, etc.)
+        else if (event.type === 'run_item_stream_event') {
+          const item = event.item;
+          console.log('[Agents SDK] Run item event:', item?.type);
+
+          // Tool call detection (correct type is snake_case)
+          if (item?.type === 'tool_call_item') {
+            const toolCall = item as any;
+            const toolName = toolCall.rawItem?.name || toolCall.name;
+            const toolArgs = toolCall.rawItem?.arguments || toolCall.arguments;
+
+            if (toolName) {
+              console.log('[Agents SDK] Tool call detected:', toolName);
+              onToolUse(toolName, toolArgs);
+            }
+          }
+
+          // Tool approval detection
+          if (item?.type === 'tool_approval_item') {
+            const approvalItem = item as any;
+            const toolName = approvalItem.rawItem?.name || approvalItem.name;
+            const toolArgs = approvalItem.rawItem?.arguments || approvalItem.arguments;
+
+            console.log('[Agents SDK] Tool approval required:', toolName);
+
+            if (onToolApproval) {
+              // Callback will handle approval UX
+              const approved = await onToolApproval(toolName, toolArgs);
+              console.log('[Agents SDK] Tool approval result:', approved);
+
+              // The backend will need to handle the actual approve/reject
+              // This just informs via callback
+            }
+          }
+
+          // Message output items (correct type is snake_case)
+          if (item?.type === 'message_output_item') {
+            const messageItem = item as any;
+            if (messageItem.rawItem?.content) {
+              const content = messageItem.rawItem.content;
+              // Handle text content from message
+              if (Array.isArray(content)) {
+                for (const block of content) {
+                  if (block.type === 'text' && block.text) {
+                    accumulatedText += block.text;
+                    onText(block.text);
+                  }
+                }
+              }
+            }
           }
         }
-      } else if (event.type === 'raw_model_stream_event') {
-        // Handle raw streaming text from model
-        const rawEvent = event.data as any;
-        if (rawEvent.type === 'text_stream' && rawEvent.text) {
-          onText(rawEvent.text);
+      }
+
+      console.log('[Agents SDK] Stream processing complete');
+
+      // Wait for stream completion
+      await streamedResult.completed;
+
+      // Check for interruptions after stream completes
+      if (streamedResult.interruptions && streamedResult.interruptions.length > 0) {
+        console.log('[Agents SDK] Detected', streamedResult.interruptions.length, 'interruptions');
+
+        // Handle each interruption
+        for (const interruption of streamedResult.interruptions) {
+          const interruptionData = interruption as any;
+          const toolName = interruptionData.rawItem?.name || 'unknown';
+          const toolArgs = interruptionData.rawItem?.arguments || {};
+
+          console.log('[Agents SDK] Processing interruption for tool:', toolName);
+
+          if (onToolApproval) {
+            // Ask for approval
+            const approved = await onToolApproval(toolName, toolArgs);
+
+            if (approved) {
+              console.log('[Agents SDK] Tool approved, resuming with approval');
+              streamedResult.state.approve(interruption);
+            } else {
+              console.log('[Agents SDK] Tool rejected, resuming with rejection');
+              streamedResult.state.reject(interruption);
+            }
+          } else {
+            // No approval callback provided, auto-reject for safety
+            console.warn('[Agents SDK] No approval callback, auto-rejecting:', toolName);
+            streamedResult.state.reject(interruption);
+          }
         }
+
+        // Resume execution with updated state
+        console.log('[Agents SDK] Resuming agent execution after approval');
+        userInput = streamedResult.state;
+        // Continue loop to re-run with state
+      } else {
+        // No interruptions, execution complete
+        continueExecution = false;
+
+        // Extract final output from RunResult
+        const finalOutput = streamedResult.finalOutput || accumulatedText;
+        console.log('[Agents SDK] Final output length:', finalOutput.length);
+
+        onComplete(finalOutput);
       }
     }
 
-    console.log('[Agents SDK] Agent execution complete');
-
-    // Extract final output
-    const finalOutput = streamedResult.finalOutput || '';
-    onComplete(finalOutput);
-
   } catch (error) {
     console.error('[Agents SDK] Execution error:', error);
-    onError(error as Error);
+
+    // Handle specific error types
+    if ((error as any).name === 'MaxTurnsExceededError') {
+      console.error('[Agents SDK] Agent exceeded maximum turns');
+      onError(new Error('Agent exceeded maximum conversation turns'));
+    } else if ((error as any).name === 'ToolCallError') {
+      console.error('[Agents SDK] Tool call failed:', error);
+      onError(new Error('Tool execution failed'));
+    } else if ((error as any).name === 'ModelBehaviorError') {
+      console.error('[Agents SDK] Unexpected model behavior:', error);
+      onError(new Error('Unexpected model behavior'));
+    } else {
+      onError(error as Error);
+    }
   }
 }
 

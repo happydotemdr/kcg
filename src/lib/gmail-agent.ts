@@ -4,7 +4,7 @@
  */
 
 import { google } from 'googleapis';
-import type { gmail_v3 } from 'googleapis';
+import type { gmail_v1 } from 'googleapis';
 import {
   findGmailAccountById,
   updateGmailAccountTokens,
@@ -234,11 +234,11 @@ export class GmailAgent {
   /**
    * Process email metadata into standardized format
    */
-  private processEmailMetadata(message: gmail_v3.Schema$Message): ProcessedEmail {
+  private processEmailMetadata(message: gmail_v1.Schema$Message): ProcessedEmail {
     const headers = message.payload?.headers || [];
 
     const getHeader = (name: string): string => {
-      const header = headers.find(h => h.name?.toLowerCase() === name.toLowerCase());
+      const header = headers.find((h: gmail_v1.Schema$MessagePartHeader) => h.name?.toLowerCase() === name.toLowerCase());
       return header?.value || '';
     };
 

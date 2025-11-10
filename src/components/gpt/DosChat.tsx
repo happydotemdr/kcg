@@ -5,30 +5,76 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
-import '@openai/chatkit-react/styles.css';
 import DosInput from './DosInput';
 import DosSidebar from './DosSidebar';
 import AppHeader from '../AppHeader';
+import DosLoadingIndicator, { type LoadingState } from './DosLoadingIndicator';
+import ToolApprovalModal from './ToolApprovalModal';
 
 export default function DosChat() {
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<string | null>(null);
+  const [tokenWarning, setTokenWarning] = useState<boolean>(false);
+
+  // Progress indicator state
+  const [isResponding, setIsResponding] = useState<boolean>(false);
+  const [currentToolExecution, setCurrentToolExecution] = useState<{
+    toolName: string;
+    status: string;
+  } | null>(null);
+
+  // Tool approval state
+  const [pendingApproval, setPendingApproval] = useState<{
+    approvalId: string;
+    toolName: string;
+    toolArguments: Record<string, any>;
+    timeoutMs: number;
+  } | null>(null);
 
   // Initialize ChatKit
   const { control, setThreadId, sendUserMessage } = useChatKit({
     api: {
-      async getClientSecret() {
+      async getClientSecret(existingSecret?: string) {
         try {
+          // If we have an existing secret, try to refresh it
+          if (existingSecret) {
+            console.log('[DosChat] Refreshing existing client secret');
+            const refreshRes = await fetch('/api/chatkit/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ client_secret: existingSecret }),
+            });
+
+            if (refreshRes.ok) {
+              const { client_secret, expires_at } = await refreshRes.json();
+              console.log('[DosChat] Token refreshed successfully, expires at:', expires_at);
+              setTokenExpiresAt(expires_at);
+              setTokenWarning(false);
+              return client_secret;
+            } else {
+              console.warn('[DosChat] Token refresh failed, creating new session');
+              // Fall through to create new session
+            }
+          }
+
+          // Create new session
+          console.log('[DosChat] Creating new client secret');
           const res = await fetch('/api/chatkit/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           });
+
           if (!res.ok) {
             throw new Error('Failed to get client secret');
           }
-          const { client_secret } = await res.json();
+
+          const { client_secret, expires_at } = await res.json();
+          console.log('[DosChat] New session created, expires at:', expires_at);
+          setTokenExpiresAt(expires_at);
+          setTokenWarning(false);
           return client_secret;
         } catch (err) {
           console.error('[DosChat] Error getting client secret:', err);
@@ -37,15 +83,106 @@ export default function DosChat() {
         }
       },
       url: '/api/chatkit/backend',
-      domainKey: undefined,
     },
+
+    // Event Handlers
+    onReady: () => {
+      console.log('[DosChat] ChatKit is ready');
+      setError(null); // Clear any initialization errors
+    },
+
+    onResponseStart: () => {
+      console.log('[DosChat] Assistant response started');
+      setIsResponding(true);
+      setCurrentToolExecution(null); // Clear any previous tool execution
+    },
+
+    onResponseEnd: () => {
+      console.log('[DosChat] Assistant response ended');
+      setIsResponding(false);
+      setCurrentToolExecution(null);
+    },
+
     onThreadChange: (event) => {
       console.log('[DosChat] Thread changed:', event.threadId);
       setCurrentThreadId(event.threadId);
     },
+
+    onThreadLoadStart: (event) => {
+      console.log('[DosChat] Loading thread:', event.threadId);
+      // Can add loading state for thread loading
+    },
+
+    onThreadLoadEnd: (event) => {
+      console.log('[DosChat] Thread loaded:', event.threadId);
+      // Can remove loading state for thread loading
+    },
+
+    onLog: (event) => {
+      console.log('[DosChat Log]', event.name, event.data);
+
+      // Handle tool approval requests from SSE stream
+      if (event.name === 'tool_approval_requested' || event.data?.type === 'tool_approval_requested') {
+        const data = event.data || event;
+        setPendingApproval({
+          approvalId: data.approval_id,
+          toolName: data.tool_name,
+          toolArguments: data.tool_arguments || {},
+          timeoutMs: data.timeout_ms || 30000,
+        });
+      }
+
+      // Track tool execution progress
+      if (event.name === 'progress' || event.name === 'tool.execute') {
+        const toolName = event.data?.tool_name || event.data?.toolName || 'unknown';
+        const status = event.data?.status || 'EXECUTING';
+        setCurrentToolExecution({ toolName, status });
+      }
+
+      // Clear tool execution on completion
+      if (event.name === 'tool.complete' || event.name === 'response.end') {
+        setCurrentToolExecution(null);
+      }
+
+      // Track specific events for analytics
+      if (event.name === 'message.send') {
+        console.log('[DosChat] User sent message:', event.data);
+      } else if (event.name === 'message.feedback') {
+        console.log('[DosChat] User provided feedback:', event.data);
+      } else if (event.name === 'message.share') {
+        console.log('[DosChat] User shared message:', event.data);
+      }
+    },
+
     onError: (event) => {
-      console.error('[DosChat] ChatKit error:', event);
-      setError(event.error?.message || 'An error occurred');
+      console.error('[DosChat] ChatKit error:', event.error);
+
+      // Enhanced error handling with detailed logging
+      const errorMessage = event.error?.message || 'An error occurred';
+      const errorStack = event.error?.stack || 'No stack trace available';
+
+      console.error('[DosChat] Error details:', {
+        message: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Set user-friendly error message
+      setError(errorMessage);
+
+      // Could send to error tracking service here
+      // Example: Sentry, LogRocket, etc.
+      /*
+      fetch('/api/errors', {
+        method: 'POST',
+        body: JSON.stringify({
+          error: errorMessage,
+          stack: errorStack,
+          timestamp: new Date().toISOString(),
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }).catch(err => console.error('Failed to log error:', err));
+      */
     },
   });
 
@@ -54,6 +191,80 @@ export default function DosChat() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Monitor token expiry and show warning when approaching expiration
+  useEffect(() => {
+    if (!tokenExpiresAt) return;
+
+    const checkTokenExpiry = () => {
+      const expiry = new Date(tokenExpiresAt).getTime();
+      const now = Date.now();
+      const fiveMinutesMs = 5 * 60 * 1000;
+
+      // Show warning if token expires within 5 minutes
+      if (now > expiry - fiveMinutesMs && now < expiry) {
+        setTokenWarning(true);
+      } else if (now >= expiry) {
+        // Token has expired
+        setTokenWarning(false);
+        setError('Session expired. Please refresh the page.');
+      } else {
+        setTokenWarning(false);
+      }
+    };
+
+    // Check immediately
+    checkTokenExpiry();
+
+    // Check every 30 seconds
+    const timer = setInterval(checkTokenExpiry, 30000);
+    return () => clearInterval(timer);
+  }, [tokenExpiresAt]);
+
+  // Handle approval decision
+  const handleApprove = async (approvalId: string) => {
+    console.log('[DosChat] Approving tool:', approvalId);
+    try {
+      const response = await fetch('/api/chatkit/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approval_id: approvalId, approved: true }),
+      });
+
+      if (response.ok) {
+        console.log('[DosChat] Approval sent successfully');
+        setPendingApproval(null);
+      } else {
+        console.error('[DosChat] Failed to send approval');
+        setError('Failed to approve action');
+      }
+    } catch (err) {
+      console.error('[DosChat] Error sending approval:', err);
+      setError('Failed to approve action');
+    }
+  };
+
+  const handleReject = async (approvalId: string) => {
+    console.log('[DosChat] Rejecting tool:', approvalId);
+    try {
+      const response = await fetch('/api/chatkit/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approval_id: approvalId, approved: false }),
+      });
+
+      if (response.ok) {
+        console.log('[DosChat] Rejection sent successfully');
+        setPendingApproval(null);
+      } else {
+        console.error('[DosChat] Failed to send rejection');
+        setError('Failed to reject action');
+      }
+    } catch (err) {
+      console.error('[DosChat] Error sending rejection:', err);
+      setError('Failed to reject action');
+    }
+  };
 
   // Check calendar connection status on mount
   useEffect(() => {
@@ -178,6 +389,11 @@ export default function DosChat() {
                   ┌─ SESSION: {currentThreadId ? 'ACTIVE' : 'NEW'} ─┐
                 </span>
                 <span className="text-green-400 text-xs">[{formatTime(currentTime)}]</span>
+                {tokenWarning && (
+                  <span className="text-yellow-400 text-xs animate-pulse">
+                    [⚠ TOKEN EXPIRING SOON]
+                  </span>
+                )}
               </div>
               {/* Calendar Connection Status */}
               <div className="flex items-center gap-2">
@@ -218,13 +434,29 @@ export default function DosChat() {
               </div>
             )}
 
+            {/* Loading Indicator */}
+            {(isResponding || currentToolExecution) && (
+              <div className="m-4 mb-4">
+                <DosLoadingIndicator
+                  state={
+                    currentToolExecution
+                      ? 'executing_tool'
+                      : isResponding
+                        ? 'thinking'
+                        : 'streaming'
+                  }
+                  toolName={currentToolExecution?.toolName}
+                  toolStatus={currentToolExecution?.status}
+                />
+              </div>
+            )}
+
             {/* ChatKit Component with DOS Theme */}
             <ChatKit
               control={control}
               className="chatkit-dos-theme"
             />
           </div>
-
           {/* Input Area */}
           <div className="dos-input-area">
             <DosInput
@@ -342,6 +574,18 @@ export default function DosChat() {
           background: #4ade80;
         }
       `}</style>
+
+      {/* Tool Approval Modal */}
+      {pendingApproval && (
+        <ToolApprovalModal
+          approvalId={pendingApproval.approvalId}
+          toolName={pendingApproval.toolName}
+          toolArguments={pendingApproval.toolArguments}
+          timeoutMs={pendingApproval.timeoutMs}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      )}
     </div>
   );
 }
