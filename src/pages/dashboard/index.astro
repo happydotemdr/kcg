@@ -46,7 +46,7 @@ const email = dbUser?.email || '';
     <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
   </head>
   <body>
-    <ThemeProvider client:load>
+    <ThemeProvider client:only="react">
       <div class="dashboard">
         <!-- Unified Header -->
         <AppHeader theme="modern" currentPage="dashboard" client:only="react" />

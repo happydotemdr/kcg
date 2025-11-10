@@ -5,6 +5,7 @@
  */
 
 import AppHeader from '@components/AppHeader';
+import { ThemeProvider } from '@lib/theme/ThemeContext';
 import { initializeDatabase } from '../lib/db';
 import { findUserByClerkId } from '../lib/db/repositories/users';
 
@@ -30,48 +31,23 @@ if (!dbUser) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar Configuration - Keep Choosing Good</title>
+
+    <!-- Theme Initialization (MUST be first to prevent flash) -->
+    <script is:inline>
+      (function() {
+        const STORAGE_KEY = 'kcg-theme-preference';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = stored === 'system' || !stored ? systemPreference : stored;
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+
+    <!-- Theme Styles -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
+
     <style>
-      :root {
-        --color-primary: #4f46e5;
-        --color-text: #1f2937;
-        --color-background: #f9fafb;
-        --color-surface: #ffffff;
-        --color-border: #e5e7eb;
-        --color-success: #10b981;
-        --color-error: #ef4444;
-        --color-warning: #f59e0b;
-        --color-text-secondary: #6b7280;
-        --color-text-tertiary: #9ca3af;
-      }
-
-      [data-theme="dark"] {
-        --color-primary: #6366f1;
-        --color-text: #f9fafb;
-        --color-background: #111827;
-        --color-surface: #1f2937;
-        --color-border: #374151;
-        --color-success: #34d399;
-        --color-error: #f87171;
-        --color-warning: #fbbf24;
-        --color-text-secondary: #d1d5db;
-        --color-text-tertiary: #9ca3af;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-          --color-primary: #6366f1;
-          --color-text: #f9fafb;
-          --color-background: #111827;
-          --color-surface: #1f2937;
-          --color-border: #374151;
-          --color-success: #34d399;
-          --color-error: #f87171;
-          --color-warning: #fbbf24;
-          --color-text-secondary: #d1d5db;
-          --color-text-tertiary: #9ca3af;
-        }
-      }
-
       * {
         box-sizing: border-box;
         margin: 0;
@@ -224,8 +200,9 @@ if (!dbUser) {
     </style>
   </head>
   <body>
-    <!-- Unified Header -->
-    <AppHeader theme="modern" currentPage="calendar" client:only="react" />
+    <ThemeProvider client:only="react">
+      <!-- Unified Header -->
+      <AppHeader theme="modern" currentPage="calendar" client:only="react" />
 
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <!-- Header -->
@@ -466,5 +443,6 @@ if (!dbUser) {
       loadCalendars();
       loadMappings();
     </script>
+    </ThemeProvider>
   </body>
 </html>

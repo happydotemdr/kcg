@@ -84,6 +84,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   /**
    * Initialize theme on mount
+   * Note: The inline script in each page already sets the initial theme
+   * to prevent FOUC. We just need to sync our state with what's already applied.
    */
   useEffect(() => {
     // Get stored preference
@@ -97,10 +99,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const initialTheme = stored || 'system';
     setThemeState(initialTheme);
 
-    // Resolve and apply
+    // Resolve theme (but don't re-apply, inline script already did this)
     const resolved = resolveTheme(initialTheme);
     setResolvedTheme(resolved);
-    applyTheme(resolved);
+
+    // Only apply if there's a mismatch (shouldn't happen in normal cases)
+    const currentTheme = document.documentElement.getAttribute('data-theme') as ResolvedTheme;
+    if (currentTheme !== resolved) {
+      applyTheme(resolved);
+    }
   }, []);
 
   /**
