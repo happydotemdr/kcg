@@ -86,8 +86,8 @@ export default function DosChat() {
           throw err;
         }
       },
-      // ✅ CRITICAL FIX: Use base URL for ChatKit threads API
-      url: '/api/chatkit/threads',
+      // ✅ ChatKit API base URL - ChatKit will append paths like /backend for message handling
+      url: '/api/chatkit',
     },
 
     // ✅ ENABLE ChatKit's built-in composer with DOS theme styling
@@ -471,10 +471,12 @@ export default function DosChat() {
             )}
 
             {/* ChatKit Component with DOS Theme (includes built-in composer) */}
-            <ChatKit
-              control={control}
-              className="chatkit-dos-theme"
-            />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <ChatKit
+                control={control}
+                className="chatkit-dos-theme"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -674,9 +676,13 @@ export default function DosChat() {
           background: var(--color-text-light);
         }
 
-        /* Composer padding */
+        /* Composer padding and visibility */
         :global(.chatkit-dos-theme [class*="composer"]) {
           padding: 1rem !important;
+          display: flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          min-height: 60px !important;
         }
 
         /* DOS Command Prompt - Dark mode only */
