@@ -9,7 +9,15 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSidebar from './ChatSidebar';
 import AppHeader from '../AppHeader';
+import DocumentUploadZone from './DocumentUploadZone';
+import DocumentHistory from './DocumentHistory';
+import ProcessingStatusCard, { type ProcessingStage } from './ProcessingStatusCard';
 import type { Message, Conversation } from '../../types/chat';
+import {
+  SUPPORTED_IMAGE_TYPES,
+  ERROR_DISPLAY_DURATION_MS,
+  MAX_FILES_PER_UPLOAD,
+} from '../../lib/constants/documents';
 
 export default function Chat() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -19,6 +27,11 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [toolInUse, setToolInUse] = useState<string | null>(null);
+
+  // Document upload state
+  const [showUploadZone, setShowUploadZone] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState<Map<string, ProcessingStage>>(new Map());
+  const [documentRefreshTrigger, setDocumentRefreshTrigger] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -243,6 +256,119 @@ export default function Chat() {
     }
   };
 
+  // Handle document upload
+  // NOTE: This is a synchronous flow - files are sent directly to Claude for analysis
+  // The "uploading" status is just UI feedback during the operation
+  // No background processing or status polling is needed
+  const handleDocumentUpload = async (files: File[]) => {
+    try {
+      setShowUploadZone(false);
+
+      for (const file of files) {
+        // Show brief "processing" indicator
+        const tempId = `${file.name}-${Date.now()}`;
+        setUploadingDocuments((prev) => new Map(prev).set(tempId, 'uploading'));
+
+        // Validate file type first (Claude Vision API only supports images)
+        const isImage = file.type.startsWith('image/');
+
+        if (!isImage) {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+          setError(`${file.name}: Only image files are supported for now. PDF/DOCX support coming soon.`);
+
+          // Remove error indicator after configured duration
+          setTimeout(() => {
+            setUploadingDocuments((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(tempId);
+              return newMap;
+            });
+          }, ERROR_DISPLAY_DURATION_MS);
+          continue;
+        }
+
+        if (!SUPPORTED_IMAGE_TYPES.includes(file.type as any)) {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+          setError(`${file.name}: Unsupported image format. Please use JPEG, PNG, GIF, or WebP.`);
+
+          // Remove error indicator after configured duration
+          setTimeout(() => {
+            setUploadingDocuments((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(tempId);
+              return newMap;
+            });
+          }, ERROR_DISPLAY_DURATION_MS);
+          continue;
+        }
+
+        try {
+          // Convert file to base64 for Claude Vision API
+          const arrayBuffer = await file.arrayBuffer();
+          const base64Data = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+
+          // Save to database for history (non-blocking, fire-and-forget)
+          const formData = new FormData();
+          formData.append('file', file);
+          fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData,
+          }).then(() => {
+            setDocumentRefreshTrigger((prev) => prev + 1);
+          }).catch((err) => {
+            console.error('Failed to save document to database:', err);
+          });
+
+          // Clear processing indicator - Claude's streaming response is now the progress indicator
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(tempId);
+            return newMap;
+          });
+
+          // Send document directly to Claude for synchronous processing
+          const message = `I've uploaded "${file.name}". Please analyze this document and extract any calendar events you find. Look for dates, times, event names, locations, and recurring patterns. Present the events in a clear format and ask if I'd like to add them to my calendar.`;
+
+          await handleSendMessage(message, [{
+            data: base64Data,
+            mediaType: file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          }]);
+
+        } catch (fileErr) {
+          // Show error for this specific file
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+          setError(`Failed to process ${file.name}: ${fileErr instanceof Error ? fileErr.message : 'Unknown error'}`);
+
+          // Remove error indicator after configured duration
+          setTimeout(() => {
+            setUploadingDocuments((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(tempId);
+              return newMap;
+            });
+          }, ERROR_DISPLAY_DURATION_MS);
+        }
+      }
+    } catch (err) {
+      console.error('Document upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload document');
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
       {/* Unified Header */}
@@ -258,7 +384,7 @@ export default function Chat() {
         />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Conversation Info Bar */}
           <div className="px-6 py-3 flex items-center justify-between" style={{
             background: 'var(--color-background)',
@@ -275,6 +401,48 @@ export default function Chat() {
               )}
             </div>
             <div className="flex items-center gap-4">
+              {/* Document Upload Button */}
+              <button
+                onClick={() => setShowUploadZone(!showUploadZone)}
+                className="px-4 py-2 text-sm font-medium flex items-center gap-2 relative"
+                style={{
+                  background: showUploadZone ? 'var(--color-primary)' : 'var(--color-surface)',
+                  color: showUploadZone ? 'var(--color-background)' : 'var(--color-text)',
+                  border: `1px solid ${showUploadZone ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  borderRadius: 'var(--radius-lg)',
+                  transition: 'all var(--transition-base)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!showUploadZone) {
+                    e.currentTarget.style.background = 'var(--color-background)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showUploadZone) {
+                    e.currentTarget.style.background = 'var(--color-surface)';
+                  }
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload Document
+                {/* Upload count badge */}
+                {uploadingDocuments.size > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: 'var(--color-warning, #f59e0b)',
+                      color: 'var(--color-background)',
+                      borderRadius: 'var(--radius-full)',
+                      border: '2px solid var(--color-background)',
+                    }}
+                  >
+                    {uploadingDocuments.size}
+                  </span>
+                )}
+              </button>
+
               {/* Calendar Connection Button */}
               {calendarConnected ? (
                 <div className="flex items-center gap-2">
@@ -331,6 +499,33 @@ export default function Chat() {
               {error}
             </div>
           )}
+
+          {/* Document Upload Zone */}
+          {showUploadZone && (
+            <div className="mx-6 mt-4">
+              <DocumentUploadZone
+                onUpload={handleDocumentUpload}
+                disabled={isStreaming}
+                maxFiles={MAX_FILES_PER_UPLOAD}
+              />
+            </div>
+          )}
+
+          {/* Processing Status Cards */}
+          {/* Note: Only shows brief "uploading" indicator - real processing happens via Claude's streaming response */}
+          {Array.from(uploadingDocuments.entries()).map(([id, stage]) => {
+            const fileName = id.split('-').slice(0, -1).join('-');
+            return (
+              <div key={id} className="mx-6 mt-4">
+                <ProcessingStatusCard
+                  fileName={fileName}
+                  stage={stage}
+                  progress={stage === 'uploading' ? 50 : 0}
+                  eventsFound={0}
+                />
+              </div>
+            );
+          })}
 
           {messages.length === 0 && !error && (
             <div className="h-full flex items-center justify-center">
@@ -445,6 +640,12 @@ export default function Chat() {
             />
           </div>
         </div>
+
+        {/* Document History Sidebar */}
+        <DocumentHistory
+          onViewDocument={(id) => console.log('View document:', id)}
+          refreshTrigger={documentRefreshTrigger}
+        />
       </div>
     </div>
   );
