@@ -185,6 +185,11 @@ export async function runAllMigrations(): Promise<void> {
         name: 'user_calendar_mappings',
         file: join(__dirname, 'migrations', '003_user_calendar_mappings.sql'),
       },
+      {
+        version: '004',
+        name: 'gmail_integration',
+        file: join(__dirname, 'migrations', '004_gmail_integration.sql'),
+      },
       // Add more migrations here as needed
     ];
 

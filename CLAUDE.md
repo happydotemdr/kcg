@@ -48,6 +48,16 @@ This project has been upgraded to the latest versions:
    - **Per-user token storage**: PostgreSQL-backed token management
    - **Configuration UI**: Web interface for mapping calendars to entity types at `/calendar-config`
    - See [CALENDAR_CRUD_README.md](./CALENDAR_CRUD_README.md) and [CALENDAR_EXTRACTION_README.md](./CALENDAR_EXTRACTION_README.md) for complete documentation
+10. **🚀 NEW: Gmail Agent Integration** - Sophisticated email management with Claude AI
+   - **Multi-Account Support**: Manage family, personal, work, school, and kids accounts
+   - **Efficient Fetching**: Metadata-first approach, on-demand body retrieval for cost optimization
+   - **AI-Powered Classification**: Automatic categorization (calendar, invoice, school, etc.)
+   - **Advanced Search Engine**: Multi-dimensional filtering with Gmail query syntax
+   - **Smart Intelligence**: Extract dates, actions, and deadlines from emails
+   - **Cost-Optimized**: Batch processing, minimal storage, selective AI usage
+   - **OAuth2 Authentication**: Secure Gmail access with automatic token refresh
+   - **Data Privacy**: 90-day retention, no full body storage, GDPR compliant
+   - See [GMAIL_AGENT_README.md](./GMAIL_AGENT_README.md) for complete documentation
 
 ## Project Structure
 
