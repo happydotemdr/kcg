@@ -271,9 +271,9 @@ export async function getRecentDocuments(userId: string, days: number = 7): Prom
   const result: QueryResult<ProcessedDocument> = await query(
     `SELECT * FROM processed_documents
     WHERE user_id = $1
-    AND uploaded_at >= NOW() - INTERVAL '${days} days'
+    AND uploaded_at >= NOW() - INTERVAL '1 day' * $2
     ORDER BY uploaded_at DESC`,
-    [userId]
+    [userId, days]
   );
 
   return result.rows;
