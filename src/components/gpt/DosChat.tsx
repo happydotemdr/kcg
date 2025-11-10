@@ -443,40 +443,38 @@ export default function DosChat() {
             </div>
           </div>
 
-          {/* Messages Area with ChatKit */}
-          <div className="flex-1 overflow-y-auto dos-screen">
-            {error && (
-              <div className="border border-red-500 p-2 m-4 mb-4 bg-red-900 bg-opacity-20">
-                <span className="text-red-400 font-mono">
-                  *** ERROR: {error} ***
-                </span>
-              </div>
-            )}
+          {/* Error Display (outside of ChatKit scrolling area) */}
+          {error && (
+            <div className="border border-red-500 p-2 m-4 mb-0 bg-red-900 bg-opacity-20" style={{ flexShrink: 0 }}>
+              <span className="text-red-400 font-mono">
+                *** ERROR: {error} ***
+              </span>
+            </div>
+          )}
 
-            {/* Loading Indicator */}
-            {(isResponding || currentToolExecution) && (
-              <div className="m-4 mb-4">
-                <DosLoadingIndicator
-                  state={
-                    currentToolExecution
-                      ? 'executing_tool'
-                      : isResponding
-                        ? 'thinking'
-                        : 'streaming'
-                  }
-                  toolName={currentToolExecution?.toolName}
-                  toolStatus={currentToolExecution?.status}
-                />
-              </div>
-            )}
-
-            {/* ChatKit Component with DOS Theme (includes built-in composer) */}
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <ChatKit
-                control={control}
-                className="chatkit-dos-theme"
+          {/* Loading Indicator (outside of ChatKit scrolling area) */}
+          {(isResponding || currentToolExecution) && (
+            <div className="m-4 mb-0" style={{ flexShrink: 0 }}>
+              <DosLoadingIndicator
+                state={
+                  currentToolExecution
+                    ? 'executing_tool'
+                    : isResponding
+                      ? 'thinking'
+                      : 'streaming'
+                }
+                toolName={currentToolExecution?.toolName}
+                toolStatus={currentToolExecution?.status}
               />
             </div>
+          )}
+
+          {/* ChatKit Component - direct flex child that manages its own scrolling */}
+          <div className="flex-1 dos-screen" style={{ minHeight: 0 }}>
+            <ChatKit
+              control={control}
+              className="chatkit-dos-theme"
+            />
           </div>
         </div>
       </div>
@@ -487,6 +485,8 @@ export default function DosChat() {
         :global(.chatkit-dos-theme) {
           background: transparent !important;
           height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
         }
 
         /* Light mode: Modern styling */
@@ -601,10 +601,13 @@ export default function DosChat() {
           display: none !important;
         }
 
-        /* Style thread container */
+        /* Style thread container - messages should scroll, composer should be fixed */
         :global(.chatkit-dos-theme [class*="thread"]) {
           background: transparent !important;
           padding: 1rem !important;
+          flex: 1 !important;
+          overflow-y: auto !important;
+          min-height: 0 !important;
         }
 
         /* Empty state styling */
@@ -676,13 +679,16 @@ export default function DosChat() {
           background: var(--color-text-light);
         }
 
-        /* Composer padding and visibility */
+        /* Composer padding and visibility - fixed at bottom */
         :global(.chatkit-dos-theme [class*="composer"]) {
           padding: 1rem !important;
           display: flex !important;
           visibility: visible !important;
           opacity: 1 !important;
           min-height: 60px !important;
+          flex-shrink: 0 !important;
+          position: relative !important;
+          z-index: 10 !important;
         }
 
         /* DOS Command Prompt - Dark mode only */
