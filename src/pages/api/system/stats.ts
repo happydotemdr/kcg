@@ -10,7 +10,6 @@ import path from 'path';
 export const prerender = false;
 
 const DATA_DIR_CLAUDE = path.join(process.cwd(), 'data', 'conversations');
-const DATA_DIR_GPT = path.join(process.cwd(), 'data', 'gpt-conversations');
 
 /**
  * Get directory size in MB
@@ -95,18 +94,12 @@ export const GET: APIRoute = async ({ locals }) => {
     // Gather system information
     const [
       claudeConvCount,
-      gptConvCount,
       claudeStorageSize,
-      gptStorageSize,
-      claudeLatest,
-      gptLatest
+      claudeLatest
     ] = await Promise.all([
       countFiles(DATA_DIR_CLAUDE),
-      countFiles(DATA_DIR_GPT),
       getDirectorySize(DATA_DIR_CLAUDE),
-      getDirectorySize(DATA_DIR_GPT),
-      getLatestConversationTime(DATA_DIR_CLAUDE),
-      getLatestConversationTime(DATA_DIR_GPT)
+      getLatestConversationTime(DATA_DIR_CLAUDE)
     ]);
 
     const stats = {
@@ -132,16 +125,6 @@ export const GET: APIRoute = async ({ locals }) => {
           sizeMB: claudeStorageSize.toFixed(2),
           path: DATA_DIR_CLAUDE,
           latestActivity: claudeLatest
-        },
-        gpt: {
-          conversations: gptConvCount,
-          sizeMB: gptStorageSize.toFixed(2),
-          path: DATA_DIR_GPT,
-          latestActivity: gptLatest
-        },
-        total: {
-          conversations: claudeConvCount + gptConvCount,
-          sizeMB: (claudeStorageSize + gptStorageSize).toFixed(2)
         }
       },
       envVars: {
@@ -150,8 +133,7 @@ export const GET: APIRoute = async ({ locals }) => {
           checkEnvVar('CLERK_SECRET_KEY')
         ],
         ai: [
-          checkEnvVar('ANTHROPIC_API_KEY'),
-          checkEnvVar('OPENAI_API_KEY')
+          checkEnvVar('ANTHROPIC_API_KEY')
         ]
       },
       endpoints: {
@@ -160,12 +142,6 @@ export const GET: APIRoute = async ({ locals }) => {
           { path: '/api/chat/conversations', method: 'GET', description: 'List Claude conversations' },
           { path: '/api/chat/conversations/[id]', method: 'GET/DELETE', description: 'Get/Delete conversation' },
           { path: '/api/chat/models', method: 'GET', description: 'List available models' }
-        ],
-        gpt: [
-          { path: '/api/gpt/send', method: 'POST', description: 'Send message to ChatGPT' },
-          { path: '/api/gpt/conversations', method: 'GET', description: 'List ChatGPT conversations' },
-          { path: '/api/gpt/conversations/[id]', method: 'GET/DELETE', description: 'Get/Delete conversation' },
-          { path: '/api/gpt/models', method: 'GET', description: 'List available models' }
         ],
         system: [
           { path: '/api/system/stats', method: 'GET', description: 'Get system statistics' }
@@ -179,7 +155,6 @@ export const GET: APIRoute = async ({ locals }) => {
         { path: '/dashboard/dev', name: 'Dashboard (Dev)', protected: true },
         { path: '/dashboard/profile', name: 'Profile', protected: true },
         { path: '/chat', name: 'Claude Chat', protected: true },
-        { path: '/chatgpt', name: 'ChatGPT (DOS)', protected: true },
         { path: '/about', name: 'About', protected: false },
         { path: '/blog', name: 'Blog', protected: false }
       ]

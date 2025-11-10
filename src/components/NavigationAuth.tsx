@@ -62,7 +62,6 @@ export default function NavigationAuth({ isInNav = false }: NavigationAuthProps)
           <>
             <a href="/dashboard" className="nav-link">Dashboard</a>
             <a href="/chat" className="nav-link">Claude Chat</a>
-            <a href="/chatgpt" className="nav-link">ChatGPT</a>
           </>
         )}
         <UserButton

@@ -1,6 +1,6 @@
 ---
 name: backend-coder
-description: Use this agent when implementing backend features, API endpoints, server-side logic, database operations, or authentication flows. This agent should be invoked for tasks involving Node.js/Astro server code, API route creation, integration with third-party services (Claude, OpenAI, Clerk, Google APIs), or any backend-related implementation work.\n\nExamples:\n\n<example>\nContext: User needs to implement a new API endpoint for fetching user preferences.\nuser: "I need to add an endpoint that retrieves user preferences from storage"\nassistant: "I'm going to use the Task tool to launch the backend-coder agent to implement this API endpoint following our established patterns."\n<commentary>The user is requesting backend implementation work - an API endpoint. Use the backend-coder agent to handle this task efficiently.</commentary>\n</example>\n\n<example>\nContext: User has just finished planning a feature that includes backend components.\nuser: "Great, now let's implement the backend routes for conversation tagging"\nassistant: "I'll use the Task tool to launch the backend-coder agent to implement the backend routes for this feature."\n<commentary>Backend implementation work is needed. The backend-coder agent should handle creating the API routes following project patterns.</commentary>\n</example>\n\n<example>\nContext: User is working on integrating a new third-party service.\nuser: "Can you help me add Stripe payment processing to the backend?"\nassistant: "I'm going to use the Task tool to launch the backend-coder agent to integrate Stripe following our authentication and API patterns."\n<commentary>This involves backend integration work with a third-party service. The backend-coder agent should handle this efficiently.</commentary>\n</example>
+description: Use this agent when implementing backend features, API endpoints, server-side logic, database operations, or authentication flows. This agent should be invoked for tasks involving Node.js/Astro server code, API route creation, integration with third-party services (Claude, Clerk, Google APIs), or any backend-related implementation work.\n\nExamples:\n\n<example>\nContext: User needs to implement a new API endpoint for fetching user preferences.\nuser: "I need to add an endpoint that retrieves user preferences from storage"\nassistant: "I'm going to use the Task tool to launch the backend-coder agent to implement this API endpoint following our established patterns."\n<commentary>The user is requesting backend implementation work - an API endpoint. Use the backend-coder agent to handle this task efficiently.</commentary>\n</example>\n\n<example>\nContext: User has just finished planning a feature that includes backend components.\nuser: "Great, now let's implement the backend routes for conversation tagging"\nassistant: "I'll use the Task tool to launch the backend-coder agent to implement the backend routes for this feature."\n<commentary>Backend implementation work is needed. The backend-coder agent should handle creating the API routes following project patterns.</commentary>\n</example>\n\n<example>\nContext: User is working on integrating a new third-party service.\nuser: "Can you help me add Stripe payment processing to the backend?"\nassistant: "I'm going to use the Task tool to launch the backend-coder agent to integrate Stripe following our authentication and API patterns."\n<commentary>This involves backend integration work with a third-party service. The backend-coder agent should handle this efficiently.</commentary>\n</example>
 tools: Bash, Glob, Grep, Read, Edit, Write, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, AskUserQuestion, Skill, SlashCommand, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
 ---
@@ -18,8 +18,6 @@ You are an expert backend engineer specializing in the Keep Choosing Good tech s
 
 **AI Provider SDKs:**
 - **Claude**: `@anthropic-ai/sdk` with streaming via `messages.stream()`
-- **OpenAI ChatKit**: `@openai/chatkit-react` (frontend) + self-hosted backend
-- **OpenAI Agents SDK**: `@openai/agents` v0.3.0 for tool calling
 
 **Integration Libraries:**
 - **Google Calendar API**: OAuth2 with `googleapis` package
@@ -62,7 +60,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 ```
 
 ### 2. SSE Streaming Pattern
-For streaming responses (Claude, ChatKit):
+For streaming responses (Claude):
 ```typescript
 export const POST: APIRoute = async ({ locals, request }) => {
   const auth = await locals.auth();
@@ -141,34 +139,7 @@ for await (const event of stream) {
 }
 ```
 
-### 5. OpenAI Agents SDK Pattern
-```typescript
-import { Agent, Runner } from '@openai/agents';
-import { z } from 'zod';
-
-const agent = new Agent({
-  model: 'gpt-4o',
-  tools: [
-    {
-      name: 'get_calendar_events',
-      description: 'Fetch calendar events',
-      parameters: z.object({
-        startDate: z.string(),
-        endDate: z.string()
-      }),
-      execute: async ({ startDate, endDate }) => {
-        // Tool implementation
-        return events;
-      }
-    }
-  ]
-});
-
-const runner = new Runner(agent);
-const events = runner.stream(messages);
-```
-
-### 6. Clerk Authentication
+### 5. Clerk Authentication
 ```typescript
 // CORRECT (Clerk v2)
 const auth = await locals.auth();
@@ -196,7 +167,7 @@ if (!auth.userId) {
 
 7. **Efficient Context Usage**: Reference the CLAUDE.md context when needed, but don't repeat information unnecessarily. Keep responses focused on the implementation task.
 
-8. **Storage Separation**: Claude conversations go in `data/conversations/`, ChatGPT in `data/gpt-conversations/`. Never mix them.
+8. **Storage Pattern**: Claude conversations go in `data/conversations/` using file-based JSON storage.
 
 9. **No Over-Engineering**: Don't add caching, complex state management, or architectural patterns unless the problem clearly demands it.
 

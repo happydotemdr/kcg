@@ -138,7 +138,7 @@ They trigger this when they want to save or share a conversation.
 
 **Example Answer**:
 ```
-Both Claude and ChatGPT. We'll add a new button to both sidebar components.
+Claude chat interface. We'll add a new button to the sidebar component.
 We'll use a PDF library (probably jsPDF) to generate the PDFs client-side.
 ```
 
@@ -249,7 +249,7 @@ Quick overview of the feature, complexity, and scope
 ## Executive Summary
 - **Feature**: Export Conversations to PDF
 - **Problem**: Users want to save conversations offline
-- **Scope**: Both Claude and ChatGPT
+- **Scope**: Claude chat interface
 - **Complexity**: Medium
 - **Estimated Slices**: 4
 ```

@@ -29,12 +29,6 @@ interface SystemStats {
       path: string;
       latestActivity: number | null;
     };
-    gpt: {
-      conversations: number;
-      sizeMB: string;
-      path: string;
-      latestActivity: number | null;
-    };
     total: {
       conversations: number;
       sizeMB: string;
@@ -46,7 +40,6 @@ interface SystemStats {
   };
   endpoints: {
     claude: Array<{ path: string; method: string; description: string }>;
-    gpt: Array<{ path: string; method: string; description: string }>;
     system: Array<{ path: string; method: string; description: string }>;
   };
   pages: Array<{ path: string; name: string; protected: boolean }>;
@@ -227,28 +220,6 @@ export default function DevDashboard() {
                 </div>
               )}
             </div>
-
-            <div className="storage-card gpt">
-              <h3>💬 ChatGPT Storage</h3>
-              <div className="storage-stats">
-                <div className="storage-stat">
-                  <div className="stat-value">{stats.storage.gpt.conversations}</div>
-                  <div className="stat-label">Conversations</div>
-                </div>
-                <div className="storage-stat">
-                  <div className="stat-value">{stats.storage.gpt.sizeMB} MB</div>
-                  <div className="stat-label">Storage Size</div>
-                </div>
-              </div>
-              <div className="storage-path">
-                <code>{stats.storage.gpt.path}</code>
-              </div>
-              {stats.storage.gpt.latestActivity && (
-                <div className="latest-activity">
-                  Latest: {getTimeAgo(stats.storage.gpt.latestActivity)}
-                </div>
-              )}
-            </div>
           </div>
         </section>
 
@@ -308,21 +279,6 @@ export default function DevDashboard() {
             </div>
 
             <div className="endpoint-group">
-              <h3>ChatGPT API</h3>
-              <div className="endpoint-list">
-                {stats.endpoints.gpt.map((endpoint, idx) => (
-                  <div key={idx} className="endpoint-item">
-                    <div className="endpoint-method">{endpoint.method}</div>
-                    <div className="endpoint-details">
-                      <code className="endpoint-path">{endpoint.path}</code>
-                      <div className="endpoint-desc">{endpoint.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="endpoint-group">
               <h3>System API</h3>
               <div className="endpoint-list">
                 {stats.endpoints.system.map((endpoint, idx) => (
@@ -370,21 +326,13 @@ src/
 │   │   ├── ChatMessage.tsx    # Message display
 │   │   ├── ChatInput.tsx      # Message input with image upload
 │   │   └── ChatSidebar.tsx    # Conversation sidebar
-│   ├── gpt/                   # ChatGPT DOS-themed components
-│   │   ├── DosChat.tsx        # DOS-themed chat
-│   │   ├── DosMessage.tsx     # DOS message display
-│   │   ├── DosInput.tsx       # Command-line input
-│   │   └── DosSidebar.tsx     # File manager sidebar
 │   └── DevDashboard.tsx       # This component!
 ├── lib/
 │   ├── claude.ts              # Claude SDK wrapper
-│   ├── openai.ts              # OpenAI SDK wrapper
-│   ├── storage.ts             # Claude conversation storage
-│   └── gpt-storage.ts         # ChatGPT conversation storage
+│   └── storage.ts             # Claude conversation storage
 ├── pages/
 │   ├── api/                   # API routes
 │   │   ├── chat/*             # Claude endpoints
-│   │   ├── gpt/*              # ChatGPT endpoints
 │   │   └── system/*           # System endpoints
 │   ├── dashboard/
 │   │   ├── index.astro        # User dashboard
@@ -393,14 +341,12 @@ src/
 │   ├── sign-in.astro          # Authentication pages
 │   ├── sign-up.astro
 │   ├── chat.astro             # Claude chat UI
-│   ├── chatgpt.astro          # ChatGPT DOS terminal UI
 │   └── index.astro            # Home page
 └── types/
     └── chat.ts                # TypeScript definitions
 
 data/
-├── conversations/             # Claude conversations (JSON files)
-└── gpt-conversations/         # ChatGPT conversations (JSON files)
+└── conversations/             # Claude conversations (JSON files)
             `}</pre>
           </div>
         </section>
@@ -411,9 +357,6 @@ data/
           <div className="quick-actions">
             <a href="/chat" className="action-btn primary">
               🤖 Open Claude Chat
-            </a>
-            <a href="/chatgpt" className="action-btn secondary">
-              💬 Open ChatGPT Terminal
             </a>
             <a href="/dashboard" className="action-btn tertiary">
               👤 User Dashboard
@@ -438,7 +381,7 @@ data/
             </div>
             <div className="tip-card">
               <h4>💾 Storage Issues</h4>
-              <p>Check if <code>data/conversations/</code> and <code>data/gpt-conversations/</code> directories exist and have write permissions.</p>
+              <p>Check if <code>data/conversations/</code> directory exists and has write permissions.</p>
             </div>
             <div className="tip-card">
               <h4>🐛 API Errors</h4>

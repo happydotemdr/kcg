@@ -531,7 +531,7 @@ A: User clicks "Share" button in conversation → Modal appears with
    → Views read-only conversation.
 
 Q3: Scope & integration?
-A: Both Claude and ChatGPT. New modal component. Need to generate
+A: Claude chat interface. New modal component. Need to generate
    unique share IDs. Read-only view of existing conversations.
 
 [... continue through all 9 questions ...]

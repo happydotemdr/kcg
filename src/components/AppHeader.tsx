@@ -8,14 +8,13 @@ import React from 'react';
 import { UserButton } from '@clerk/astro/react';
 
 interface AppHeaderProps {
-  currentPage?: 'dashboard' | 'chat' | 'chatgpt' | 'calendar' | 'other';
+  currentPage?: 'dashboard' | 'chat' | 'calendar' | 'other';
 }
 
 export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
     { href: '/chat', label: 'Claude Chat', key: 'chat' },
-    { href: '/chatgpt', label: 'ChatGPT', key: 'chatgpt' },
     { href: '/calendar-config', label: 'Calendar', key: 'calendar' },
   ];
 

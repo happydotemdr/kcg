@@ -130,14 +130,12 @@ From the plan, copy JSON and use TodoWrite:
 
 The skill understands these existing patterns:
 
-### Provider Structure
-- `/api/chat/*` for Claude
-- `/api/gpt/*` for ChatGPT
-- Separate storage per provider
+### API Structure
+- `/api/chat/*` for Claude endpoints
+- File-based JSON storage
 
-### UI Themes
-- `components/chat/*` - Modern theme (Claude)
-- `components/gpt/*` - DOS theme (ChatGPT)
+### UI Components
+- `components/chat/*` - Claude chat components
 
 ### Authentication
 - All protected routes use Clerk

@@ -1,7 +1,7 @@
 # Keep Choosing Good - AI Chat Application
 
 ## Overview
-A modern AI chat experience built with Astro and React, featuring both Claude (Anthropic) and ChatGPT (OpenAI) integrations. The application demonstrates best practices for building production-ready chat interfaces with multiple AI providers, including a unique retro DOS-themed ChatGPT interface.
+A modern AI chat experience built with Astro and React, featuring Claude (Anthropic) integration. The application demonstrates best practices for building production-ready chat interfaces with streaming responses, multimodal support, and agent capabilities.
 
 ## Architecture
 
@@ -9,10 +9,8 @@ A modern AI chat experience built with Astro and React, featuring both Claude (A
 - **Frontend**: Astro v5 + React + Tailwind CSS
 - **Backend**: Astro API Routes (Node.js)
 - **Authentication**: Clerk (@clerk/astro v2)
-- **AI**:
-  - **Claude**: Anthropic Claude SDK (@anthropic-ai/sdk) with custom streaming implementation
-  - **ChatGPT**: OpenAI ChatKit SDK (@openai/chatkit-react) + OpenAI Agents SDK (@openai/agents)
-- **Storage**: File-based JSON conversation persistence (separate storage for each AI provider)
+- **AI**: Anthropic Claude SDK (@anthropic-ai/sdk) with streaming implementation
+- **Storage**: File-based JSON conversation persistence
 
 ### Recent Upgrades (November 2025)
 This project has been upgraded to the latest versions:
@@ -21,36 +19,31 @@ This project has been upgraded to the latest versions:
 - **@astrojs/node v8 → v9.5.0**: Latest Node adapter
 - **@astrojs/react v3 → v4.4.2**: React integration updates
 - **@astrojs/tailwind v5 → v6.0.2**: Tailwind CSS updates
-- **ChatGPT → ChatKit + Agents SDK**: Migrated from custom OpenAI implementation to official ChatKit SDK with Agents SDK for tool calling
 
 #### Breaking Changes Addressed
 1. **Output Mode**: Using `output: 'server'` for full server-side rendering (required for API routes with Node adapter)
 2. **Clerk Authentication**: Updated from `locals.auth.userId` to `locals.auth()` function call pattern
 3. **Type Safety**: All TypeScript errors resolved with updated type definitions
-4. **ChatKit Integration**: Replaced custom SSE streaming with ChatKit ThreadStreamEvent protocol
 
 ### Key Features
 1. **User Authentication**: Complete sign-up/sign-in flow powered by Clerk with protected routes
-2. **Dual AI Providers**: Both Claude and ChatGPT integrations in a single app
-3. **Real-time Streaming**: Server-Sent Events (SSE) for streaming responses from both providers
-4. **Multimodal Support**: Image upload and vision analysis for both AI models
-5. **Conversation Management**: Persistent chat history with resume capability (separate storage per provider)
-6. **Context Management**: Following best practices for token management
-7. **Dual UI Themes**:
-   - **Claude Chat** (`/chat`): Clean, modern design with smooth animations and account avatar
-   - **ChatGPT** (`/chatgpt`): Retro DOS terminal theme with CRT effects, scanlines, command-line aesthetic, and DOS-styled user menu
-8. **Responsive Design**: Works seamlessly on desktop and mobile devices
-9. **Claude Agent SDK Integration**: Google Calendar with **Full CRUD Operations** and **Multi-Calendar Support**
+2. **Real-time Streaming**: Server-Sent Events (SSE) for streaming responses from Claude
+3. **Multimodal Support**: Image upload and vision analysis
+4. **Conversation Management**: Persistent chat history with resume capability
+5. **Context Management**: Following best practices for token management
+6. **Clean Modern UI**: Modern design with smooth animations and account avatar
+7. **Responsive Design**: Works seamlessly on desktop and mobile devices
+8. **Claude Agent SDK Integration**: Google Calendar with **Full CRUD Operations** and **Multi-Calendar Support**
    - **Full CRUD**: Create, Read, Update, Delete calendar events via natural language
    - **Multi-Calendar Support**: Intelligent routing to family, personal, or work calendars
    - **Smart Calendar Selection**: Automatic inference from keywords ("dentist" → family, "investor meeting" → work)
-   - **🎯 NEW: Intelligent Calendar Extraction**: Upload documents/images (schedules, flyers, screenshots) and automatically extract events with duplicate detection and batch creation
+   - **Intelligent Calendar Extraction**: Upload documents/images (schedules, flyers, screenshots) and automatically extract events with duplicate detection and batch creation
    - **Agentic workflow**: Automatic tool execution with streaming feedback
    - **OAuth2 authentication**: Secure access with write permissions
    - **Per-user token storage**: PostgreSQL-backed token management
    - **Configuration UI**: Web interface for mapping calendars to entity types at `/calendar-config`
    - See [CALENDAR_CRUD_README.md](./CALENDAR_CRUD_README.md) and [CALENDAR_EXTRACTION_README.md](./CALENDAR_EXTRACTION_README.md) for complete documentation
-10. **🚀 NEW: Gmail Agent Integration** - Sophisticated email management with Claude AI
+9. **Gmail Agent Integration**: Sophisticated email management with Claude AI
    - **Multi-Account Support**: Manage family, personal, work, school, and kids accounts
    - **Efficient Fetching**: Metadata-first approach, on-demand body retrieval for cost optimization
    - **AI-Powered Classification**: Automatic categorization (calendar, invoice, school, etc.)
@@ -66,33 +59,20 @@ This project has been upgraded to the latest versions:
 ```
 src/
 ├── components/
-│   ├── UserMenu.tsx      # Account avatar with login/logout (modern & DOS themes)
-│   ├── chat/             # Claude chat components (modern UI)
+│   ├── UserMenu.tsx      # Account avatar with login/logout
+│   ├── chat/             # Claude chat components
 │   │   ├── Chat.tsx      # Main chat orchestrator with streaming
 │   │   ├── ChatMessage.tsx   # Individual message display
 │   │   ├── ChatInput.tsx     # Message input with image upload
 │   │   └── ChatSidebar.tsx   # Conversation history sidebar
-│   └── gpt/              # ChatGPT components (DOS-themed UI)
-│       ├── DosChat.tsx   # DOS-themed ChatKit integration
-│       ├── DosInput.tsx      # Command-line style input
-│       └── DosSidebar.tsx    # File manager style sidebar
+│   └── DevDashboard.tsx  # Developer dashboard component
 ├── lib/
 │   ├── claude.ts         # Claude SDK wrapper and utilities
-│   ├── openai.ts         # OpenAI SDK wrapper (deprecated - use openai-agents.ts)
-│   ├── openai-agents.ts  # OpenAI Agents SDK with calendar tools
-│   ├── storage.ts        # Claude conversation persistence
-│   └── gpt-storage.ts    # ChatGPT conversation persistence
+│   └── storage.ts        # Claude conversation persistence
 ├── pages/
 │   ├── api/
-│   │   ├── chat/         # Claude API routes (all protected with Clerk auth)
-│   │   │   ├── send.ts   # POST - Send message with streaming
-│   │   │   ├── conversations.ts  # GET - List conversations
-│   │   │   ├── conversations/[id].ts  # GET/DELETE - Manage conversation
-│   │   │   └── models.ts # GET - List available models
-│   │   ├── chatkit/       # ChatKit API routes (all protected with Clerk auth)
-│   │   │   ├── backend.ts     # POST - ChatKit backend with ThreadStreamEvent protocol
-│   │   │   └── session.ts     # POST - Generate ChatKit client tokens
-│   │   └── gpt/          # Legacy ChatGPT routes (conversation management only)
+│   │   └── chat/         # Claude API routes (all protected with Clerk auth)
+│   │       ├── send.ts   # POST - Send message with streaming
 │   │       ├── conversations.ts  # GET - List conversations
 │   │       ├── conversations/[id].ts  # GET/DELETE - Manage conversation
 │   │       └── models.ts # GET - List available models
@@ -100,11 +80,9 @@ src/
 │   ├── sign-up.astro     # Clerk sign-up page with custom styling
 │   ├── dashboard/        # Protected dashboard pages
 │   │   └── index.astro   # User dashboard with profile info
-│   ├── chat.astro        # Claude chat page (protected, modern UI)
-│   └── chatgpt.astro     # ChatGPT page (protected, DOS terminal UI with ChatKit)
+│   └── chat.astro        # Claude chat page (protected, modern UI)
 └── types/
-    ├── chat.ts           # Message and Conversation types
-    └── chatkit-events.ts # ChatKit ThreadStreamEvent protocol types
+    └── chat.ts           # Message and Conversation types
 ```
 
 ## API Endpoints
@@ -131,42 +109,6 @@ Delete a Claude conversation permanently.
 #### GET /api/chat/models
 List available Claude models.
 
-### ChatKit Endpoints (`/api/chatkit/*`)
-
-#### POST /api/chatkit/session
-Generate ChatKit client tokens for authenticated users.
-- Validates Clerk session
-- Returns `{ client_secret }` for ChatKit React component authentication
-
-#### POST /api/chatkit/backend
-Self-hosted ChatKit backend implementing ThreadStreamEvent protocol.
-- Supports new conversations (threads) or continuing existing ones
-- Handles text + image multimodal input
-- Integrates with OpenAI Agents SDK for calendar tool calling
-- Returns SSE stream with ThreadStreamEvent format:
-  - `thread.created` - New conversation created
-  - `thread.item.added` - User/assistant message or tool call added
-  - `thread.item.updated` - Content streaming during generation
-  - `thread.item.done` - Message complete
-  - `progress_update` - Tool execution progress
-  - `error` - Error events with retry support
-
-### Legacy ChatGPT Endpoints (`/api/gpt/*`)
-
-**Note**: The `/api/gpt/send` endpoint has been replaced by `/api/chatkit/backend`. The following endpoints remain for conversation management:
-
-#### GET /api/gpt/conversations
-List all ChatGPT conversations, sorted by most recent.
-
-#### GET /api/gpt/conversations/[id]
-Retrieve a specific ChatGPT conversation with full message history.
-
-#### DELETE /api/gpt/conversations/[id]
-Delete a ChatGPT conversation permanently.
-
-#### GET /api/gpt/models
-List available OpenAI models.
-
 ## Authentication
 
 The application uses [Clerk](https://clerk.com) for user authentication, providing a complete sign-up/sign-in flow with minimal setup.
@@ -180,11 +122,10 @@ The application uses [Clerk](https://clerk.com) for user authentication, providi
 - **Session Management**: Automatic session handling and token refresh
 
 ### Implementation Details
-- **Protected Pages**: `/chat` and `/chatgpt` redirect to sign-in if user is not authenticated
-- **Protected API Routes**: All `/api/chat/*` and `/api/gpt/*` endpoints validate Clerk sessions
+- **Protected Pages**: `/chat` redirects to sign-in if user is not authenticated
+- **Protected API Routes**: All `/api/chat/*` endpoints validate Clerk sessions
 - **UserMenu Component**:
-  - Modern theme for Claude chat with clean UI
-  - DOS theme for ChatGPT with retro terminal styling
+  - Clean modern UI design
   - Dashboard link and user avatar with dropdown menu
   - Sign-out functionality
 
@@ -216,10 +157,6 @@ PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 # Get from: https://console.anthropic.com/settings/keys
 ANTHROPIC_API_KEY=sk-ant-...
 
-# OpenAI API (Required for /chatgpt page)
-# Get from: https://platform.openai.com/api-keys
-OPENAI_API_KEY=sk-...
-
 # Google Calendar Integration (Optional, for calendar tool)
 # Get from: https://console.cloud.google.com/apis/credentials
 # See CALENDAR_SETUP.md for detailed setup instructions
@@ -238,18 +175,7 @@ GOOGLE_REDIRECT_URI=http://localhost:4321/api/auth/google/callback
 - **Context Window**: Managed automatically by storage layer
 - **Conversation Pruning**: Keeps last 20 messages by default
 - **Storage**: `data/conversations/`
-
-#### ChatGPT with ChatKit (DOS Theme)
-- **Frontend**: OpenAI ChatKit React SDK (`@openai/chatkit-react` v1.2.0)
-- **Backend**: Self-hosted ChatKit backend with ThreadStreamEvent protocol
-- **Agent Runtime**: OpenAI Agents SDK (`@openai/agents` v0.3.0)
-- **Model**: gpt-4o (most capable model, great for complex tasks)
-- **Max Tokens**: 4096 per response
-- **Context Window**: Managed automatically by storage layer
-- **Conversation Pruning**: Keeps last 20 messages by default
-- **Storage**: `data/gpt-conversations/`
-- **Tool Integration**: Calendar CRUD operations via Agents SDK
-- **Streaming**: ThreadStreamEvent SSE protocol with progress indicators
+- **Streaming**: Server-Sent Events (SSE) for real-time responses
 
 ## Best Practices Implemented
 
@@ -280,47 +206,13 @@ GOOGLE_REDIRECT_URI=http://localhost:4321/api/auth/google/callback
    - Proper type definitions matching Anthropic's API
    - Type-safe message content blocks
 
-### From OpenAI's ChatKit & Agents SDK Guidelines
-
-1. **Official SDK Integration**
-   - Uses `@openai/chatkit-react` for robust frontend chat UI
-   - Implements `@openai/agents` for agentic tool execution
-   - Self-hosted backend with ThreadStreamEvent protocol
-   - Proper session management via `/api/chatkit/session`
-
-2. **ThreadStreamEvent Protocol**
-   - Compliant with ChatKit's streaming event format
-   - `thread.created` → `thread.item.added` → `thread.item.updated` → `thread.item.done` flow
-   - Progress indicators via `progress_update` events
-   - Tool execution visibility with `ClientToolCallItem` events
-   - Proper error handling with `ErrorEvent` and retry support
-
-3. **Agent Tool Integration**
-   - Zod schema validation for tool parameters
-   - Automatic tool execution via Agents SDK
-   - Streaming feedback during tool calls
-   - Calendar CRUD operations (get, create, update, delete events)
-   - Multi-calendar support with intelligent routing
-
-4. **Type Safety & Protocol Compliance**
-   - Complete TypeScript types for ThreadStreamEvent protocol (`/src/types/chatkit-events.ts`)
-   - Discriminated unions for event types
-   - ISO 8601 timestamps throughout
-   - Proper SSE formatting (`data: {JSON}\n\n`)
-
-5. **DOS Theme Preservation**
-   - ChatKit component styled with extensive CSS overrides
-   - Retro CRT monitor effects maintained
-   - Green terminal text, scanlines, and DOS borders
-   - Command-line aesthetic preserved
-
 ## Development
 
 ### Setup
 ```bash
 npm install
 cp .env.example .env
-# Add your Clerk keys, ANTHROPIC_API_KEY, and OPENAI_API_KEY to .env
+# Add your Clerk keys and ANTHROPIC_API_KEY to .env
 npm run dev
 ```
 
@@ -330,7 +222,6 @@ Visit:
 - Sign In: http://localhost:4321/sign-in
 - Dashboard: http://localhost:4321/dashboard (requires authentication)
 - Claude Chat: http://localhost:4321/chat (requires authentication)
-- ChatGPT DOS Terminal: http://localhost:4321/chatgpt (requires authentication)
 
 ### Building
 ```bash
@@ -385,13 +276,7 @@ Generated plans are saved to: `docs/features/[feature-name]-implementation-plan.
 
 ## Data Storage
 
-Conversations are stored as JSON files with separate directories per provider:
-
-### Claude Conversations
-Location: `data/conversations/`
-
-### ChatGPT Conversations
-Location: `data/gpt-conversations/`
+Conversations are stored as JSON files in `data/conversations/`.
 
 Each conversation includes:
 - Unique ID
@@ -399,25 +284,6 @@ Each conversation includes:
 - Full message history with timestamps
 - Model and system prompt configuration
 - Created/updated timestamps
-
-## ChatGPT DOS Terminal Theme
-
-The ChatGPT page features a unique retro DOS command-line interface:
-
-### Visual Features
-- **CRT Monitor Effect**: Authentic scan lines and screen glow
-- **DOS Color Scheme**: Classic green text on black background
-- **Monospace Font**: IBM Plex Mono for authentic terminal look
-- **ASCII Art**: DOS-style borders and command prompts
-- **Blinking Cursor**: Classic terminal cursor animation
-- **File Manager Sidebar**: DOS-style file listing for conversations
-
-### UX Features
-- Command-line style input with `C:\>` prompt
-- Retro loading animations
-- DOS-style error messages
-- Keyboard shortcuts and terminal interactions
-- Image upload with DOS-style preview
 
 ## Future Enhancements
 - Per-user conversation storage (currently shared across all users)
@@ -441,9 +307,3 @@ The ChatGPT page features a unique retro DOS command-line interface:
 - [Anthropic Documentation](https://docs.anthropic.com/)
 - [Streaming Guide](https://docs.anthropic.com/claude/reference/messages-streaming)
 - [Vision Guide](https://docs.anthropic.com/claude/docs/vision)
-
-### ChatGPT
-- [OpenAI Node SDK](https://github.com/openai/openai-node)
-- [OpenAI Documentation](https://platform.openai.com/docs)
-- [Chat Completions Guide](https://platform.openai.com/docs/guides/chat-completions)
-- [Vision Guide](https://platform.openai.com/docs/guides/vision)

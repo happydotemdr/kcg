@@ -10,17 +10,17 @@ Before starting, you have access to the full codebase context. Key architectural
 - **Frontend**: Astro v5 + React + Tailwind CSS
 - **Backend**: Astro API Routes (Node.js adapter)
 - **Authentication**: Clerk v2 (@clerk/astro)
-- **AI Providers**: Claude (Anthropic) and ChatGPT (OpenAI)
-- **Storage**: File-based JSON (separate per provider)
+- **AI Provider**: Claude (Anthropic)
+- **Storage**: File-based JSON
 - **Database**: PostgreSQL (for OAuth tokens)
 
 ### Existing Patterns
-1. **Dual UI Themes**: Modern (Claude) and DOS-themed (ChatGPT)
-2. **Separate Provider Structures**: `/api/chat/*` (Claude) and `/api/gpt/*` (ChatGPT)
+1. **Modern UI**: Clean, modern design with Tailwind CSS
+2. **API Structure**: `/api/chat/*` for Claude endpoints
 3. **Protected Routes**: All chat pages and API endpoints require Clerk authentication
 4. **Streaming Responses**: SSE for real-time AI responses
-5. **Component Organization**: Provider-specific directories (chat/ for Claude, gpt/ for ChatGPT)
-6. **Storage Patterns**: Separate storage utilities per provider
+5. **Component Organization**: Components in `src/components/chat/`
+6. **Storage Pattern**: File-based JSON storage in `data/conversations/`
 
 ## Workflow Phases
 
@@ -37,7 +37,6 @@ Ask the user these questions sequentially, waiting for each answer before procee
    - "What triggers the user to use this feature?"
 
 3. **Scope & Integration**
-   - "Should this feature work with Claude, ChatGPT, or both providers?"
    - "Does this feature require new UI components or modify existing ones?"
    - "Will this integrate with any external services or APIs?"
 
@@ -137,7 +136,7 @@ Generate a markdown file with this structure:
 ## Executive Summary
 - **Feature**: [Name]
 - **Problem**: [What problem this solves]
-- **Scope**: [Claude/ChatGPT/Both]
+- **Scope**: [Application scope]
 - **Complexity**: [Low/Medium/High]
 - **Estimated Slices**: [Number]
 

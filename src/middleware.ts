@@ -5,17 +5,13 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
  * - /dashboard and all its subroutes
  * - /api/user and all its subroutes
  * - /api/chat and all its subroutes (Claude API)
- * - /api/gpt and all its subroutes (ChatGPT API)
  * - /chat page (Claude chat UI)
- * - /chatgpt page (ChatGPT UI)
  */
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/api/user(.*)',
   '/api/chat(.*)',
-  '/api/gpt(.*)',
   '/chat',
-  '/chatgpt',
 ]);
 
 /**
