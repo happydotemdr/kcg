@@ -190,6 +190,11 @@ export async function runAllMigrations(): Promise<void> {
         name: 'processed_documents',
         file: join(__dirname, 'migrations', '004_processed_documents.sql'),
       },
+      {
+        version: '005',
+        name: 'gmail_integration',
+        file: join(__dirname, 'migrations', '005_gmail_integration.sql'),
+      },
       // Add more migrations here as needed
     ];
 

@@ -221,7 +221,7 @@ CREATE OR REPLACE FUNCTION is_gmail_token_expired(account_id_param UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
   expiry BIGINT;
-  current_time BIGINT;
+  current_time_ms BIGINT;
 BEGIN
   SELECT gmail_expiry_date INTO expiry
   FROM gmail_accounts
@@ -231,8 +231,8 @@ BEGIN
     RETURN FALSE; -- No expiry set, assume valid
   END IF;
 
-  current_time := EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000; -- Convert to milliseconds
-  RETURN current_time >= expiry;
+  current_time_ms := EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000; -- Convert to milliseconds
+  RETURN current_time_ms >= expiry;
 END;
 $$ LANGUAGE plpgsql;
 
