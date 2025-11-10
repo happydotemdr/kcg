@@ -19,6 +19,21 @@ export const prerender = false;
     <title>AI Chat - Keep Choosing Good</title>
     <meta name="description" content="Chat with Claude AI - a helpful, harmless, and honest AI assistant" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Theme Initialization (MUST be first to prevent flash) -->
+    <script is:inline>
+      (function() {
+        const STORAGE_KEY = 'kcg-theme-preference';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = stored === 'system' || !stored ? systemPreference : stored;
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+
+    <!-- Theme Styles -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/themes/theme-transitions.css" />
   </head>
   <body class="m-0 p-0 overflow-hidden">
     <ChatComponent client:only="react" />
@@ -47,15 +62,15 @@ export const prerender = false;
   }
 
   ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--color-surface);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
+    background: var(--color-text-light);
+    border-radius: var(--radius-sm);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--color-text-secondary);
   }
 </style>

@@ -26,6 +26,10 @@ const description = 'ChatGPT with a retro DOS command-line interface';
       /* DOS Terminal Styles */
       @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 
+      /* ============================================
+         DARK MODE - DOS TERMINAL (DEFAULT)
+         ============================================ */
+
       .dos-container {
         font-family: 'IBM Plex Mono', 'Courier New', monospace;
         background: #000000;
@@ -197,6 +201,234 @@ const description = 'ChatGPT with a retro DOS command-line interface';
       /* Allow text selection in messages */
       .dos-screen {
         user-select: text;
+      }
+
+      /* ============================================
+         LIGHT MODE - STANDARD CHAT INTERFACE
+         ============================================ */
+
+      [data-theme="light"] .dos-container {
+        font-family: var(--font-family-base);
+        background: var(--color-background) !important;
+        color: var(--color-text) !important;
+        animation: none; /* Disable screen flicker */
+      }
+
+      [data-theme="light"] .dos-screen {
+        background: var(--color-surface) !important;
+        text-shadow: none; /* Remove CRT glow */
+        border-radius: var(--radius-lg); /* Standard border radius */
+      }
+
+      /* Hide CRT effects in light mode */
+      [data-theme="light"] .dos-scanlines {
+        display: none;
+      }
+
+      [data-theme="light"] .dos-screen::before {
+        display: none; /* Hide CRT glow effect */
+      }
+
+      /* Remove text shadow in light mode */
+      [data-theme="light"] .dos-container,
+      [data-theme="light"] .dos-screen {
+        text-shadow: none;
+      }
+
+      /* Standard header in light mode */
+      [data-theme="light"] .dos-header {
+        background: var(--color-surface);
+        animation: none; /* Disable flicker */
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      /* Standard scrollbar in light mode */
+      [data-theme="light"] .dos-screen::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      [data-theme="light"] .dos-screen::-webkit-scrollbar-track {
+        background: var(--color-surface);
+        border-left: none;
+      }
+
+      [data-theme="light"] .dos-screen::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border: 1px solid var(--color-surface);
+        border-radius: var(--radius-sm);
+      }
+
+      [data-theme="light"] .dos-screen::-webkit-scrollbar-thumb:hover {
+        background: var(--color-text-light);
+      }
+
+      /* Firefox scrollbar in light mode */
+      [data-theme="light"] .dos-screen {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border) var(--color-surface);
+      }
+
+      /* Standard selection in light mode */
+      [data-theme="light"] .dos-container ::selection {
+        background: var(--color-primary-light);
+        color: var(--color-text);
+      }
+
+      /* Standard link hover in light mode */
+      [data-theme="light"] .dos-container a:hover {
+        text-decoration: underline;
+        text-shadow: none;
+        color: var(--color-primary-dark);
+      }
+
+      /* Standard focus in light mode */
+      [data-theme="light"] .dos-container input:focus,
+      [data-theme="light"] .dos-container textarea:focus {
+        box-shadow: var(--focus-ring);
+        outline: var(--focus-outline-width) solid var(--focus-outline-color);
+        outline-offset: 2px;
+      }
+
+      /* Standard button in light mode */
+      [data-theme="light"] .dos-container button:active {
+        transform: var(--active-transform);
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* ============================================
+         LIGHT MODE - COMPONENT OVERRIDES
+         Override Tailwind hardcoded colors
+         ============================================ */
+
+      /* Override black backgrounds */
+      [data-theme="light"] .dos-container .bg-black {
+        background-color: var(--color-background) !important;
+      }
+
+      /* Override green text colors */
+      [data-theme="light"] .dos-container .text-green-400,
+      [data-theme="light"] .dos-container .text-green-300,
+      [data-theme="light"] .dos-container .text-green-500 {
+        color: var(--color-text) !important;
+      }
+
+      [data-theme="light"] .dos-container .text-green-600,
+      [data-theme="light"] .dos-container .text-green-700 {
+        color: var(--color-text-secondary) !important;
+      }
+
+      /* Override green borders */
+      [data-theme="light"] .dos-container .border-green-500,
+      [data-theme="light"] .dos-container .border-green-400,
+      [data-theme="light"] .dos-container .border-green-700 {
+        border-color: var(--color-border) !important;
+      }
+
+      /* Override green backgrounds */
+      [data-theme="light"] .dos-container .bg-green-900,
+      [data-theme="light"] .dos-container .bg-green-800 {
+        background-color: var(--color-surface) !important;
+      }
+
+      /* Override cyan colors (user messages) */
+      [data-theme="light"] .dos-container .text-cyan-400,
+      [data-theme="light"] .dos-container .text-cyan-300 {
+        color: var(--color-primary) !important;
+      }
+
+      [data-theme="light"] .dos-container .border-cyan-500 {
+        border-color: var(--color-primary) !important;
+      }
+
+      [data-theme="light"] .dos-container .bg-cyan-900 {
+        background-color: var(--color-info-bg) !important;
+      }
+
+      /* Override yellow colors (assistant/warning) */
+      [data-theme="light"] .dos-container .text-yellow-400,
+      [data-theme="light"] .dos-container .text-yellow-300 {
+        color: var(--color-secondary) !important;
+      }
+
+      [data-theme="light"] .dos-container .border-yellow-500 {
+        border-color: var(--color-warning) !important;
+      }
+
+      [data-theme="light"] .dos-container .bg-yellow-900 {
+        background-color: var(--color-warning-bg) !important;
+      }
+
+      /* Override red colors (errors/delete) */
+      [data-theme="light"] .dos-container .text-red-400,
+      [data-theme="light"] .dos-container .text-red-300 {
+        color: var(--color-error) !important;
+      }
+
+      [data-theme="light"] .dos-container .border-red-500,
+      [data-theme="light"] .dos-container .border-red-700 {
+        border-color: var(--color-error) !important;
+      }
+
+      [data-theme="light"] .dos-container .bg-red-900,
+      [data-theme="light"] .dos-container .bg-red-500 {
+        background-color: var(--color-error-bg) !important;
+      }
+
+      /* Override blue colors (buttons) */
+      [data-theme="light"] .dos-container .text-blue-300 {
+        color: var(--color-info) !important;
+      }
+
+      [data-theme="light"] .dos-container .border-blue-500,
+      [data-theme="light"] .dos-container .border-blue-400 {
+        border-color: var(--color-info) !important;
+      }
+
+      [data-theme="light"] .dos-container .bg-blue-900,
+      [data-theme="light"] .dos-container .bg-blue-800 {
+        background-color: var(--color-info-bg) !important;
+      }
+
+      /* Override placeholder text */
+      [data-theme="light"] .dos-container .placeholder-green-700::placeholder {
+        color: var(--color-text-light) !important;
+      }
+
+      /* Remove DOS-specific filters on images */
+      [data-theme="light"] .dos-container img {
+        filter: none !important;
+      }
+
+      /* Standard button hover states in light mode */
+      [data-theme="light"] .dos-container button:hover {
+        opacity: 0.8;
+      }
+
+      /* Override DOS prompt color */
+      [data-theme="light"] .dos-container .font-mono {
+        font-family: var(--font-family-base);
+      }
+
+      /* Keep monospace for pre and code elements */
+      [data-theme="light"] .dos-container pre,
+      [data-theme="light"] .dos-container code {
+        font-family: var(--font-family-mono);
+      }
+
+      /* Standard borders in light mode */
+      [data-theme="light"] .dos-container .border-t-2,
+      [data-theme="light"] .dos-container .border-b-2,
+      [data-theme="light"] .dos-container .border-r-2,
+      [data-theme="light"] .dos-container .border-l-2,
+      [data-theme="light"] .dos-container .border-2 {
+        border-width: 1px;
+      }
+
+      /* Standard border radius in light mode */
+      [data-theme="light"] .dos-container button,
+      [data-theme="light"] .dos-container input,
+      [data-theme="light"] .dos-container textarea {
+        border-radius: var(--radius-md);
       }
     </style>
   </head>

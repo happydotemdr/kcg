@@ -1,20 +1,13 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { SignIn as ClerkSignIn } from '@clerk/astro/react';
+import { ThemeAwareSignIn } from '@components/ThemeAwareClerkWrapper';
 
 export const prerender = false;
 ---
 
 <BaseLayout title="Sign In - Keep Choosing Good">
   <main class="sign-in-container">
-    <ClerkSignIn
-      client:load
-      appearance={{
-        variables: {
-          colorPrimary: '#4f46e5'
-        }
-      }}
-    />
+    <ThemeAwareSignIn client:load />
   </main>
 </BaseLayout>
 

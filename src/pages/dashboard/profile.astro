@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { UserProfile } from '@clerk/astro/react';
+import { ThemeAwareUserProfile } from '@components/ThemeAwareClerkWrapper';
 
 export const prerender = false;
 
@@ -16,14 +16,7 @@ if (!userId) {
 
 <BaseLayout title="Profile - Keep Choosing Good">
   <div class="profile-container">
-    <UserProfile
-      client:load
-      appearance={{
-        variables: {
-          colorPrimary: '#4f46e5'
-        }
-      }}
-    />
+    <ThemeAwareUserProfile client:load />
   </div>
 </BaseLayout>
 
@@ -31,8 +24,52 @@ if (!userId) {
   .profile-container {
     max-width: 900px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: var(--spacing-xl) var(--spacing-md);
     display: flex;
     justify-content: center;
+    background: var(--color-background);
+    min-height: 80vh;
+  }
+
+  /* Ensure proper form element theming */
+  :global(.profile-container .cl-formFieldInput) {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  :global(.profile-container .cl-formFieldInput:focus) {
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
+  }
+
+  :global(.profile-container .cl-formButtonPrimary) {
+    background: var(--color-primary);
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast);
+  }
+
+  :global(.profile-container .cl-formButtonPrimary:hover) {
+    background: var(--color-primary-dark);
+    transform: var(--hover-transform);
+  }
+
+  :global(.profile-container .cl-card) {
+    background: var(--color-surface);
+    border: var(--border-width) var(--border-style) var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(.profile-container .cl-profileSection) {
+    border-color: var(--color-border);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .profile-container {
+      padding: var(--spacing-md) var(--spacing-sm);
+    }
   }
 </style>

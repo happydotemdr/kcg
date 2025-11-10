@@ -244,7 +244,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 flex-col">
+    <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
       {/* Unified Header */}
       <AppHeader theme="modern" currentPage="chat" />
 
@@ -260,13 +260,16 @@ export default function Chat() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Conversation Info Bar */}
-          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+          <div className="px-6 py-3 flex items-center justify-between" style={{
+            background: 'var(--color-background)',
+            borderBottom: '1px solid var(--color-border)'
+          }}>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
                 {conversation?.title || 'New Conversation'}
               </h2>
               {conversation && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   Model: {conversation.model}
                 </p>
               )}
@@ -275,7 +278,7 @@ export default function Chat() {
               {/* Calendar Connection Button */}
               {calendarConnected ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-green-600 flex items-center gap-1">
+                  <span className="text-sm flex items-center gap-1" style={{ color: 'var(--color-success-text)' }}>
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
@@ -283,7 +286,13 @@ export default function Chat() {
                   </span>
                   <button
                     onClick={handleDisconnectCalendar}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      transition: 'color var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
                   >
                     Disconnect
                   </button>
@@ -291,7 +300,15 @@ export default function Chat() {
               ) : (
                 <button
                   onClick={handleConnectCalendar}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium flex items-center gap-2"
+                  style={{
+                    background: 'var(--color-primary)',
+                    color: 'var(--color-background)',
+                    borderRadius: 'var(--radius-lg)',
+                    transition: 'all var(--transition-base)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -305,7 +322,12 @@ export default function Chat() {
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
           {error && (
-            <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mx-6 mt-4 px-4 py-3" style={{
+              background: 'var(--color-error-bg)',
+              border: '1px solid var(--color-error)',
+              color: 'var(--color-error)',
+              borderRadius: 'var(--radius-lg)'
+            }}>
               {error}
             </div>
           )}
@@ -314,10 +336,10 @@ export default function Chat() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">💬</div>
-                <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+                <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
                   Start a conversation
                 </h2>
-                <p className="text-gray-600 max-w-md">
+                <p className="max-w-md" style={{ color: 'var(--color-text-secondary)' }}>
                   Ask me anything! I can help with questions, analysis, creative
                   writing, and more. You can also upload images for me to analyze.
                 </p>
@@ -331,17 +353,21 @@ export default function Chat() {
 
           {/* Streaming Message */}
           {isStreaming && streamingText && (
-            <div className="flex gap-4 p-4 bg-gray-50">
+            <div className="flex gap-4 p-4" style={{ background: 'var(--color-surface)' }}>
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium bg-gradient-to-br from-purple-500 to-blue-500">
+                <div className="w-8 h-8 flex items-center justify-center text-sm font-medium" style={{
+                  borderRadius: 'var(--radius-full)',
+                  background: 'linear-gradient(135deg, var(--color-secondary), var(--color-primary))',
+                  color: 'var(--color-background)'
+                }}>
                   AI
                 </div>
               </div>
               <div className="flex-1 space-y-3">
-                <div className="font-medium text-sm text-gray-700">Claude</div>
-                <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
+                <div className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Claude</div>
+                <div className="prose prose-sm max-w-none whitespace-pre-wrap" style={{ color: 'var(--color-text)' }}>
                   {streamingText}
-                  <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>
+                  <span className="inline-block w-2 h-4 ml-1 animate-pulse" style={{ background: 'var(--color-primary)' }}></span>
                 </div>
               </div>
             </div>
@@ -349,16 +375,20 @@ export default function Chat() {
 
           {/* Loading indicator */}
           {isStreaming && !streamingText && (
-            <div className="flex gap-4 p-4 bg-gray-50">
+            <div className="flex gap-4 p-4" style={{ background: 'var(--color-surface)' }}>
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium bg-gradient-to-br from-purple-500 to-blue-500">
+                <div className="w-8 h-8 flex items-center justify-center text-sm font-medium" style={{
+                  borderRadius: 'var(--radius-full)',
+                  background: 'linear-gradient(135deg, var(--color-secondary), var(--color-primary))',
+                  color: 'var(--color-background)'
+                }}>
                   AI
                 </div>
               </div>
               <div className="flex-1">
-                <div className="font-medium text-sm text-gray-700 mb-2">Claude</div>
+                <div className="font-medium text-sm mb-2" style={{ color: 'var(--color-text)' }}>Claude</div>
                 {toolInUse ? (
-                  <div className="text-sm text-blue-600 flex items-center gap-2">
+                  <div className="text-sm flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -369,9 +399,9 @@ export default function Chat() {
                   </div>
                 ) : (
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 animate-bounce" style={{ background: 'var(--color-text-light)', borderRadius: 'var(--radius-full)' }}></div>
+                    <div className="w-2 h-2 animate-bounce" style={{ background: 'var(--color-text-light)', borderRadius: 'var(--radius-full)', animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 animate-bounce" style={{ background: 'var(--color-text-light)', borderRadius: 'var(--radius-full)', animationDelay: '0.2s' }}></div>
                   </div>
                 )}
               </div>
@@ -384,14 +414,23 @@ export default function Chat() {
           {/* Input Area */}
           <div>
             {isStreaming && (
-              <div className="px-6 py-2 bg-yellow-50 border-t border-yellow-200 text-sm">
+              <div className="px-6 py-2 text-sm" style={{
+                background: 'var(--color-warning-bg)',
+                borderTop: '1px solid var(--color-warning)'
+              }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-yellow-800">
+                  <span style={{ color: 'var(--color-warning)' }}>
                     Claude is thinking...
                   </span>
                   <button
                     onClick={handleCancelStreaming}
-                    className="text-red-600 hover:text-red-700 font-medium"
+                    className="font-medium"
+                    style={{
+                      color: 'var(--color-error)',
+                      transition: 'opacity var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                   >
                     Cancel
                   </button>

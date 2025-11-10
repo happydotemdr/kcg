@@ -35,7 +35,43 @@ if (!dbUser) {
         --color-primary: #4f46e5;
         --color-text: #1f2937;
         --color-background: #f9fafb;
+        --color-surface: #ffffff;
+        --color-border: #e5e7eb;
+        --color-success: #10b981;
+        --color-error: #ef4444;
+        --color-warning: #f59e0b;
+        --color-text-secondary: #6b7280;
+        --color-text-tertiary: #9ca3af;
       }
+
+      [data-theme="dark"] {
+        --color-primary: #6366f1;
+        --color-text: #f9fafb;
+        --color-background: #111827;
+        --color-surface: #1f2937;
+        --color-border: #374151;
+        --color-success: #34d399;
+        --color-error: #f87171;
+        --color-warning: #fbbf24;
+        --color-text-secondary: #d1d5db;
+        --color-text-tertiary: #9ca3af;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --color-primary: #6366f1;
+          --color-text: #f9fafb;
+          --color-background: #111827;
+          --color-surface: #1f2937;
+          --color-border: #374151;
+          --color-success: #34d399;
+          --color-error: #f87171;
+          --color-warning: #fbbf24;
+          --color-text-secondary: #d1d5db;
+          --color-text-tertiary: #9ca3af;
+        }
+      }
+
       * {
         box-sizing: border-box;
         margin: 0;
@@ -44,6 +80,146 @@ if (!dbUser) {
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         background: var(--color-background);
+        color: var(--color-text);
+      }
+      .page-title {
+        font-size: 1.875rem;
+        font-weight: bold;
+        color: var(--color-text);
+      }
+      .page-description {
+        margin-top: 0.5rem;
+        color: var(--color-text-secondary);
+      }
+      .card {
+        background: var(--color-surface);
+        box-shadow: 0 1px 3px 0 color-mix(in srgb, black 10%, transparent), 0 1px 2px 0 color-mix(in srgb, black 6%, transparent);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border: 1px solid var(--color-border);
+      }
+      .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 1rem;
+      }
+      .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-text);
+        margin-bottom: 0.5rem;
+      }
+      .form-input, .form-select {
+        width: 100%;
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--color-surface);
+        color: var(--color-text);
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+      }
+      .form-checkbox {
+        height: 1rem;
+        width: 1rem;
+        accent-color: var(--color-primary);
+        border: 1px solid var(--color-border);
+        border-radius: 0.25rem;
+        cursor: pointer;
+      }
+      .form-checkbox:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+      }
+      .btn-primary {
+        width: 100%;
+        background: var(--color-primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-danger {
+        color: var(--color-error);
+        font-size: 0.875rem;
+        font-weight: 500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .btn-danger:hover {
+        opacity: 0.8;
+      }
+      .mapping-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+      }
+      .mapping-title {
+        font-weight: 500;
+        color: var(--color-text);
+      }
+      .mapping-info {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        margin-top: 0.25rem;
+      }
+      .mapping-meta {
+        font-size: 0.75rem;
+        color: var(--color-text-tertiary);
+        margin-top: 0.25rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .badge-primary {
+        background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        color: var(--color-primary);
+      }
+      .badge-success {
+        background: color-mix(in srgb, var(--color-success) 15%, transparent);
+        color: var(--color-success);
+        margin-left: 0.5rem;
+      }
+      .alert {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+      }
+      .alert-success {
+        background: color-mix(in srgb, var(--color-success) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+        color: var(--color-success);
+      }
+      .alert-error {
+        background: color-mix(in srgb, var(--color-error) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+        color: var(--color-error);
+      }
+      .text-muted {
+        color: var(--color-text-tertiary);
       }
     </style>
   </head>
@@ -54,35 +230,35 @@ if (!dbUser) {
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Calendar Configuration</h1>
-        <p class="mt-2 text-gray-600">
+        <h1 class="page-title">Calendar Configuration</h1>
+        <p class="page-description">
           Map your Google Calendars to different areas of your life for intelligent calendar management.
         </p>
       </div>
 
       <!-- Status Message -->
-      <div id="status-message" class="hidden mb-6 p-4 rounded-lg"></div>
+      <div id="status-message" class="hidden"></div>
 
       <!-- Current Mappings -->
-      <div class="bg-white shadow rounded-lg p-6 mb-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Calendar Mappings</h2>
+      <div class="card mb-8">
+        <h2 class="card-title">Current Calendar Mappings</h2>
         <div id="current-mappings" class="space-y-4">
-          <p class="text-gray-500">Loading...</p>
+          <p class="text-muted">Loading...</p>
         </div>
       </div>
 
       <!-- Add New Mapping -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Add Calendar Mapping</h2>
+      <div class="card">
+        <h2 class="card-title">Add Calendar Mapping</h2>
 
         <form id="add-mapping-form" class="space-y-4">
           <div>
-            <label for="calendar-select" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="calendar-select" class="form-label">
               Select Google Calendar
             </label>
             <select
               id="calendar-select"
-              class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="form-select"
               required
             >
               <option value="">Loading calendars...</option>
@@ -90,12 +266,12 @@ if (!dbUser) {
           </div>
 
           <div>
-            <label for="entity-type-select" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="entity-type-select" class="form-label">
               Entity Type
             </label>
             <select
               id="entity-type-select"
-              class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="form-select"
               required
             >
               <option value="">Select entity type...</option>
@@ -109,16 +285,16 @@ if (!dbUser) {
             <input
               id="is-default-checkbox"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              class="form-checkbox"
             />
-            <label for="is-default-checkbox" class="ml-2 block text-sm text-gray-700">
+            <label for="is-default-checkbox" class="ml-2 block text-sm" style="color: var(--color-text);">
               Set as default calendar
             </label>
           </div>
 
           <button
             type="submit"
-            class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            class="btn-primary"
           >
             Add Calendar Mapping
           </button>
@@ -165,23 +341,23 @@ if (!dbUser) {
             const container = document.getElementById('current-mappings');
 
             if (data.mappings.length === 0) {
-              container.innerHTML = '<p class="text-gray-500">No calendar mappings yet. Add one below to get started.</p>';
+              container.innerHTML = '<p class="text-muted">No calendar mappings yet. Add one below to get started.</p>';
             } else {
               container.innerHTML = data.mappings.map(mapping => `
-                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="mapping-card">
                   <div>
-                    <h3 class="font-medium text-gray-900">${mapping.calendar_name}</h3>
-                    <p class="text-sm text-gray-600 mt-1">
-                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <h3 class="mapping-title">${mapping.calendar_name}</h3>
+                    <p class="mapping-info">
+                      <span class="badge badge-primary">
                         ${mapping.entity_type}
                       </span>
-                      ${mapping.is_default ? '<span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Default</span>' : ''}
+                      ${mapping.is_default ? '<span class="badge badge-success">Default</span>' : ''}
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">Calendar ID: ${mapping.google_calendar_id}</p>
+                    <p class="mapping-meta">Calendar ID: ${mapping.google_calendar_id}</p>
                   </div>
                   <button
                     onclick="deleteMapping('${mapping.id}')"
-                    class="text-red-600 hover:text-red-800 text-sm font-medium"
+                    class="btn-danger"
                   >
                     Delete
                   </button>
@@ -200,8 +376,8 @@ if (!dbUser) {
         const messageEl = document.getElementById('status-message');
         messageEl.textContent = message;
         messageEl.className = type === 'success'
-          ? 'mb-6 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800'
-          : 'mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800';
+          ? 'alert alert-success'
+          : 'alert alert-error';
         messageEl.classList.remove('hidden');
 
         setTimeout(() => {
