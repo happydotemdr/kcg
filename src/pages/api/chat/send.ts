@@ -110,6 +110,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
         let fullResponse = '';
         let hasError = false;
 
+        // Helper function to safely enqueue data
+        const safeEnqueue = (data: string): boolean => {
+          try {
+            // Check if controller is still open (desiredSize is null when closed)
+            if (controller.desiredSize !== null) {
+              controller.enqueue(encoder.encode(data));
+              return true;
+            } else {
+              console.error('Cannot write to closed stream controller');
+              return false;
+            }
+          } catch (error) {
+            console.error('Error enqueueing data to stream:', error);
+            return false;
+          }
+        };
+
+        // Helper function to safely close controller
+        const safeClose = () => {
+          try {
+            if (controller.desiredSize !== null) {
+              controller.close();
+            }
+          } catch (error) {
+            console.error('Error closing stream controller:', error);
+          }
+        };
+
         try {
           // Stream the completion with tool use support
           await streamChatCompletionWithTools(
@@ -127,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 delta: { type: 'text_delta', text },
               });
 
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              safeEnqueue(`data: ${data}\n\n`);
             },
             // On tool use
             (toolName: string, toolInput: any) => {
@@ -140,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 tool_input: toolInput,
               });
 
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              safeEnqueue(`data: ${data}\n\n`);
             },
             // On complete
             async (finalText: string) => {
@@ -162,21 +190,71 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 conversationId: conversation!.id,
               });
 
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-              controller.close();
+              safeEnqueue(`data: ${data}\n\n`);
+              safeClose();
             },
             // On error
             (error: Error) => {
               hasError = true;
-              console.error('Streaming error:', error);
+
+              // Enhanced error logging with full context
+              console.error('[API/chat/send] Streaming error:', {
+                errorMessage: error.message,
+                errorStack: error.stack,
+                errorName: error.name,
+                userId: dbUser.id,
+                clerkUserId: clerkUserId,
+                conversationId: conversation?.id || 'new-conversation',
+                model: conversation?.model || model,
+                messageCount: conversation?.messages.length || 0,
+                hasImages: (images || []).length > 0,
+                imageCount: (images || []).length,
+                timestamp: new Date().toISOString(),
+                // Include first 200 chars of error for quick scanning
+                errorPreview: error.message?.substring(0, 200),
+              });
+
+              // Categorize error for user-friendly messaging
+              let userMessage = error.message || 'An error occurred during streaming';
+              let canRetry = true;
+
+              // Image-related errors
+              if (error.message?.includes('image') || error.message?.includes('base64')) {
+                userMessage = 'There was a problem processing your image. Please ensure it is a valid image file under 5 MB and try again.';
+              }
+              // Rate limiting
+              else if (error.message?.includes('rate_limit') || error.message?.includes('429')) {
+                userMessage = 'Too many requests. Please wait a moment and try again.';
+              }
+              // Quota exceeded
+              else if (error.message?.includes('quota') || error.message?.includes('insufficient_quota')) {
+                userMessage = 'Service quota exceeded. Please contact support or try again later.';
+                canRetry = false;
+              }
+              // Authentication errors
+              else if (error.message?.includes('API key') || error.message?.includes('authentication') || error.message?.includes('401')) {
+                userMessage = 'Authentication error. Please refresh the page and try again.';
+                canRetry = false;
+              }
+              // Timeout errors
+              else if (error.message?.includes('timeout')) {
+                userMessage = 'Request timed out. Please try again with a shorter message or fewer images.';
+              }
+              // Generic API errors
+              else if (error.message?.includes('5 MB')) {
+                userMessage = 'Image file size exceeds the 5 MB limit. Please compress or resize your image and try again.';
+              }
 
               const data = JSON.stringify({
                 type: 'error',
-                error: error.message || 'An error occurred during streaming',
+                error: userMessage,
+                errorCode: error.name || 'STREAMING_ERROR',
+                canRetry: canRetry,
+                timestamp: new Date().toISOString(),
               });
 
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-              controller.close();
+              safeEnqueue(`data: ${data}\n\n`);
+              safeClose();
             },
             conversation.model,
             conversation.systemPrompt
@@ -190,8 +268,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             error: error instanceof Error ? error.message : 'Unknown error',
           });
 
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-          controller.close();
+          safeEnqueue(`data: ${data}\n\n`);
+          safeClose();
         }
       },
     });

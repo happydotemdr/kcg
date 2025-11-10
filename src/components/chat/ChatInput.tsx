@@ -4,12 +4,16 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
+import { compressImage } from '../../utils/imageCompression';
+import { validateFileSize } from '../../utils/fileValidation';
+import { getFileSizeErrorMessage, getCompressionErrorMessage, formatFileSize } from '../../utils/errorMessages';
 
 interface ImageAttachment {
   data: string;
   mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
   preview: string;
   name: string;
+  compressionStats?: string;
 }
 
 interface ChatInputProps {
@@ -59,21 +63,190 @@ export default function ChatInput({
         continue;
       }
 
-      // Read file as base64
-      const reader = new FileReader();
-      const imageData = await new Promise<string>((resolve) => {
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
+      // Validate file size
+      const sizeValidation = validateFileSize(file);
+      if (!sizeValidation.valid && !sizeValidation.needsCompression) {
+        alert(getFileSizeErrorMessage(file.name, file.size));
+        continue;
+      }
 
-      // Extract base64 data (remove data:image/...;base64, prefix)
-      const base64Data = imageData.split(',')[1];
+      // Compress image if needed (file > 3.76 MB or validation suggests compression)
+      let preview: string;
+      let base64Data: string;
+      let compressionStats: string | undefined;
+
+      if (sizeValidation.needsCompression) {
+        let previewUrl: string | undefined;
+
+        try {
+          // Compress the image
+          const compressionResult = await compressImage(file);
+          const compressedBlob = compressionResult.blob;
+          const metadata = compressionResult.metadata;
+
+          // Create compression stats string
+          const originalFormatted = formatFileSize(metadata.originalSize);
+          const compressedFormatted = formatFileSize(metadata.compressedSize);
+          const savingsPercent = ((1 - metadata.compressionRatio) * 100).toFixed(0);
+          compressionStats = `Original: ${originalFormatted} → Compressed: ${compressedFormatted} (${savingsPercent}% smaller)`;
+
+          // Create preview URL (track it for cleanup)
+          previewUrl = URL.createObjectURL(compressedBlob);
+
+          try {
+            // Extract base64 from compressed blob with enhanced error handling
+            const reader = new FileReader();
+            const imageData = await new Promise<string>((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reader.abort();
+                reject(new Error('File reading timed out after 10 seconds'));
+              }, 10000);
+
+              reader.onload = (e) => {
+                clearTimeout(timeout);
+                const result = e.target?.result;
+
+                if (!result) {
+                  reject(new Error('FileReader returned null or undefined'));
+                  return;
+                }
+
+                if (typeof result !== 'string') {
+                  reject(new Error('FileReader result is not a string'));
+                  return;
+                }
+
+                if (!result.startsWith('data:image/')) {
+                  reject(new Error('Invalid image data URL'));
+                  return;
+                }
+
+                resolve(result);
+              };
+
+              reader.onerror = () => {
+                clearTimeout(timeout);
+                const error = reader.error || new Error('Unknown FileReader error');
+                reject(new Error(`Failed to read compressed image: ${error.message}`));
+              };
+
+              reader.readAsDataURL(compressedBlob);
+            });
+
+            // Validate data URL format
+            const parts = imageData.split(',');
+            if (parts.length !== 2) {
+              throw new Error('Invalid data URL format');
+            }
+
+            base64Data = parts[1];
+            preview = previewUrl;  // Success - keep the URL
+
+          } catch (readerError) {
+            // CRITICAL FIX: Clean up blob URL before re-throwing
+            if (previewUrl) {
+              URL.revokeObjectURL(previewUrl);
+            }
+
+            console.error('[ChatInput] FileReader error:', {
+              fileName: file.name,
+              compressedSize: compressedBlob.size,
+              error: readerError instanceof Error ? readerError.message : 'Unknown error',
+              stack: readerError instanceof Error ? readerError.stack : undefined,
+            });
+
+            throw readerError;  // Re-throw to outer catch
+          }
+        } catch (error) {
+          const errorObj = error instanceof Error ? error : new Error('Unknown compression error');
+          console.error('[ChatInput] Compression or FileReader failed:', {
+            fileName: file.name,
+            fileSize: file.size,
+            error: errorObj.message,
+            stack: errorObj.stack,
+          });
+          alert(getCompressionErrorMessage(file.name, errorObj));
+          continue;
+        }
+      } else {
+        // Use original file without compression
+        try {
+          const reader = new FileReader();
+          const imageData = await new Promise<string>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reader.abort();
+              reject(new Error('File reading timed out after 10 seconds'));
+            }, 10000);
+
+            reader.onload = (e) => {
+              clearTimeout(timeout);
+              const result = e.target?.result;
+
+              if (!result) {
+                reject(new Error('FileReader returned null or undefined'));
+                return;
+              }
+
+              if (typeof result !== 'string') {
+                reject(new Error('FileReader result is not a string (expected base64 data URL)'));
+                return;
+              }
+
+              if (!result.startsWith('data:image/')) {
+                reject(new Error('FileReader result is not a valid image data URL'));
+                return;
+              }
+
+              resolve(result);
+            };
+
+            reader.onerror = () => {
+              clearTimeout(timeout);
+              const error = reader.error || new Error('Unknown FileReader error');
+              reject(new Error(`Failed to read file: ${error.message}`));
+            };
+
+            reader.onabort = () => {
+              clearTimeout(timeout);
+              reject(new Error('File reading was aborted'));
+            };
+
+            reader.readAsDataURL(file);
+          });
+
+          // Validate data URL format before splitting
+          const parts = imageData.split(',');
+          if (parts.length !== 2) {
+            throw new Error('Invalid data URL format - expected "data:image/...;base64,..."');
+          }
+
+          // Extract base64 data (remove data:image/...;base64, prefix)
+          base64Data = parts[1];
+          preview = imageData;
+
+        } catch (readerError) {
+          console.error('[ChatInput] FileReader error (non-compressed path):', {
+            fileName: file.name,
+            fileSize: file.size,
+            error: readerError instanceof Error ? readerError.message : 'Unknown error',
+            stack: readerError instanceof Error ? readerError.stack : undefined,
+          });
+
+          alert(
+            `Failed to read "${file.name}". ${
+              readerError instanceof Error ? readerError.message : 'Unknown error'
+            }\n\nPlease try:\n• Using a different image\n• Checking if the file is corrupted\n• Using a different browser`
+          );
+          continue;
+        }
+      }
 
       newImages.push({
         data: base64Data,
-        mediaType: file.type as any,
-        preview: imageData,
+        mediaType: sizeValidation.needsCompression ? 'image/jpeg' : (file.type as any),
+        preview: preview,
         name: file.name,
+        compressionStats: compressionStats,
       });
     }
 
@@ -123,31 +296,45 @@ export default function ChatInput({
       {images.length > 0 && (
         <div className="p-3 flex gap-2 overflow-x-auto">
           {images.map((img, idx) => (
-            <div key={idx} className="relative flex-shrink-0">
-              <img
-                src={img.preview}
-                alt={img.name}
-                className="h-20 w-20 object-cover"
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-border)'
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => removeImage(idx)}
-                className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs"
-                style={{
-                  background: 'var(--color-error)',
-                  color: 'var(--color-background)',
-                  borderRadius: 'var(--radius-full)',
-                  transition: 'opacity var(--transition-fast)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                ×
-              </button>
+            <div key={idx} className="relative flex-shrink-0 flex flex-col">
+              <div className="relative">
+                <img
+                  src={img.preview}
+                  alt={img.name}
+                  className="h-20 w-20 object-cover"
+                  style={{
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs"
+                  style={{
+                    background: 'var(--color-error)',
+                    color: 'var(--color-background)',
+                    borderRadius: 'var(--radius-full)',
+                    transition: 'opacity var(--transition-fast)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
+                  ×
+                </button>
+              </div>
+              {img.compressionStats && (
+                <div
+                  className="text-xs mt-1 max-w-[80px]"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: '1.2'
+                  }}
+                  title={img.compressionStats}
+                >
+                  {img.compressionStats}
+                </div>
+              )}
             </div>
           ))}
         </div>
