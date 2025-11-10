@@ -18,6 +18,9 @@ import {
   ERROR_DISPLAY_DURATION_MS,
   MAX_FILES_PER_UPLOAD,
 } from '../../lib/constants/documents';
+import { compressImage } from '../../utils/imageCompression';
+import { validateFileSize, isImageFile } from '../../utils/fileValidation';
+import { getFileSizeErrorMessage, getCompressionErrorMessage, getUnsupportedTypeErrorMessage, formatFileSize } from '../../utils/errorMessages';
 
 export default function Chat() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -261,6 +264,12 @@ export default function Chat() {
   // The "uploading" status is just UI feedback during the operation
   // No background processing or status polling is needed
   const handleDocumentUpload = async (files: File[]) => {
+    // Track batch processing results
+    const results = {
+      succeeded: [] as string[],
+      failed: [] as Array<{ fileName: string; reason: string }>,
+    };
+
     try {
       setShowUploadZone(false);
 
@@ -278,7 +287,30 @@ export default function Chat() {
             newMap.set(tempId, 'error');
             return newMap;
           });
-          setError(`${file.name}: Only image files are supported for now. PDF/DOCX support coming soon.`);
+
+          // Log technical details for debugging
+          console.error('[DocumentUpload] Non-image file type:', { name: file.name, type: file.type, size: file.size });
+
+          const errorMessage = `"${file.name}" is not an image file. Currently, only images are supported for document extraction. Support for PDF and DOCX files is coming soon. Please upload an image file (JPEG, PNG, GIF, or WebP).`;
+
+          // Track failure
+          results.failed.push({
+            fileName: file.name,
+            reason: 'Not an image file',
+          });
+
+          setError(errorMessage);
+
+          // Auto-clear error after duration (unless critical)
+          const isCriticalError = errorMessage.includes('authentication') ||
+                                 errorMessage.includes('Session expired') ||
+                                 errorMessage.includes('quota');
+
+          if (!isCriticalError) {
+            setTimeout(() => {
+              setError(null);
+            }, ERROR_DISPLAY_DURATION_MS * 2);
+          }
 
           // Remove error indicator after configured duration
           setTimeout(() => {
@@ -291,13 +323,86 @@ export default function Chat() {
           continue;
         }
 
-        if (!SUPPORTED_IMAGE_TYPES.includes(file.type as any)) {
+        if (!isImageFile(file)) {
           setUploadingDocuments((prev) => {
             const newMap = new Map(prev);
             newMap.set(tempId, 'error');
             return newMap;
           });
-          setError(`${file.name}: Unsupported image format. Please use JPEG, PNG, GIF, or WebP.`);
+
+          // Use error utility for consistent messaging
+          const errorMessage = getUnsupportedTypeErrorMessage(file.name, file.type);
+
+          // Track failure
+          results.failed.push({
+            fileName: file.name,
+            reason: 'Unsupported image type',
+          });
+
+          // Log technical details for debugging
+          console.error('[DocumentUpload] Unsupported image type:', { name: file.name, type: file.type, size: file.size, supportedTypes: SUPPORTED_IMAGE_TYPES });
+
+          setError(errorMessage);
+
+          // Auto-clear error after duration (unless critical)
+          const isCriticalError = errorMessage.includes('authentication') ||
+                                 errorMessage.includes('Session expired') ||
+                                 errorMessage.includes('quota');
+
+          if (!isCriticalError) {
+            setTimeout(() => {
+              setError(null);
+            }, ERROR_DISPLAY_DURATION_MS * 2);
+          }
+
+          // Remove error indicator after configured duration
+          setTimeout(() => {
+            setUploadingDocuments((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(tempId);
+              return newMap;
+            });
+          }, ERROR_DISPLAY_DURATION_MS);
+          continue;
+        }
+
+        // Validate file size
+        const sizeValidation = validateFileSize(file);
+        if (!sizeValidation.valid) {
+          setUploadingDocuments((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tempId, 'error');
+            return newMap;
+          });
+
+          const errorMessage = getFileSizeErrorMessage(file.name, file.size);
+
+          // Track failure
+          results.failed.push({
+            fileName: file.name,
+            reason: 'File too large',
+          });
+
+          // Log technical details for debugging
+          console.error('[DocumentUpload] File size validation failed:', {
+            name: file.name,
+            size: file.size,
+            sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+            validation: sizeValidation,
+          });
+
+          setError(errorMessage);
+
+          // Auto-clear error after duration (unless critical)
+          const isCriticalError = errorMessage.includes('authentication') ||
+                                 errorMessage.includes('Session expired') ||
+                                 errorMessage.includes('quota');
+
+          if (!isCriticalError) {
+            setTimeout(() => {
+              setError(null);
+            }, ERROR_DISPLAY_DURATION_MS * 2);
+          }
 
           // Remove error indicator after configured duration
           setTimeout(() => {
@@ -311,8 +416,20 @@ export default function Chat() {
         }
 
         try {
-          // Convert file to base64 for Claude Vision API
-          const arrayBuffer = await file.arrayBuffer();
+          // Update status to show compression is happening
+          setUploadingDocuments((prev) => new Map(prev).set(tempId, 'compressing'));
+
+          // Compress image and get metadata
+          const { blob, metadata } = await compressImage(file);
+
+          // Display compression statistics
+          const originalFormatted = formatFileSize(metadata.originalSize);
+          const compressedFormatted = formatFileSize(metadata.compressedSize);
+          const savingsPercent = ((1 - metadata.compressionRatio) * 100).toFixed(0);
+          console.log(`Compressed ${file.name}: ${originalFormatted} → ${compressedFormatted} (${savingsPercent}% reduction)`);
+
+          // Convert compressed blob to base64 for Claude Vision API
+          const arrayBuffer = await blob.arrayBuffer();
           const base64Data = btoa(
             new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
           );
@@ -341,8 +458,11 @@ export default function Chat() {
 
           await handleSendMessage(message, [{
             data: base64Data,
-            mediaType: file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            mediaType: 'image/jpeg', // Always JPEG after compression
           }]);
+
+          // Track success
+          results.succeeded.push(file.name);
 
         } catch (fileErr) {
           // Show error for this specific file
@@ -351,7 +471,39 @@ export default function Chat() {
             newMap.set(tempId, 'error');
             return newMap;
           });
-          setError(`Failed to process ${file.name}: ${fileErr instanceof Error ? fileErr.message : 'Unknown error'}`);
+
+          // Use specialized error message for compression failures
+          const errorMessage = fileErr instanceof Error
+            ? getCompressionErrorMessage(file.name, fileErr)
+            : `Failed to process "${file.name}". Please try a different image or compress it manually before uploading.`;
+
+          // Track failure
+          results.failed.push({
+            fileName: file.name,
+            reason: fileErr instanceof Error ? fileErr.message : 'Processing failed',
+          });
+
+          // Log technical details for debugging
+          console.error('[DocumentUpload] Compression or processing failed:', {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            error: fileErr instanceof Error ? fileErr.message : 'Unknown error',
+            stack: fileErr instanceof Error ? fileErr.stack : undefined,
+          });
+
+          setError(errorMessage);
+
+          // Auto-clear error after duration (unless critical)
+          const isCriticalError = errorMessage.includes('authentication') ||
+                                 errorMessage.includes('Session expired') ||
+                                 errorMessage.includes('quota');
+
+          if (!isCriticalError) {
+            setTimeout(() => {
+              setError(null);
+            }, ERROR_DISPLAY_DURATION_MS * 2);
+          }
 
           // Remove error indicator after configured duration
           setTimeout(() => {
@@ -363,9 +515,33 @@ export default function Chat() {
           }, ERROR_DISPLAY_DURATION_MS);
         }
       }
+
+      // Show aggregate summary after all files processed
+      if (results.failed.length > 0) {
+        const summary = `Processed ${files.length} files: ${results.succeeded.length} succeeded, ${results.failed.length} failed.\n\nFailed files:\n${results.failed.map(f => `• ${f.fileName}`).join('\n')}`;
+
+        console.error('[DocumentUpload] Batch processing summary:', results);
+
+        setError(summary);
+
+        // Auto-clear error after longer duration for batch results
+        setTimeout(() => setError(null), ERROR_DISPLAY_DURATION_MS * 2);
+      } else if (results.succeeded.length > 0) {
+        console.log('[DocumentUpload] All files processed successfully:', results.succeeded);
+      }
     } catch (err) {
-      console.error('Document upload error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to upload document');
+      // Log technical details for debugging
+      console.error('[DocumentUpload] Unexpected error during upload process:', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        filesAttempted: files.length,
+      });
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred during document upload. Please try again or contact support if the issue persists.'
+      );
     }
   };
 

@@ -7,6 +7,7 @@ import React from 'react';
 
 export type ProcessingStage =
   | 'uploading'
+  | 'compressing'
   | 'uploaded'
   | 'extracting'
   | 'checking'
@@ -37,6 +38,7 @@ export default function ProcessingStatusCard({
   // Stage configurations
   const stages: Record<ProcessingStage, StageConfig> = {
     uploading: { label: 'Uploading...', icon: '⏳', complete: false },
+    compressing: { label: 'Compressing image...', icon: '⏳', complete: false },
     uploaded: { label: 'Document uploaded', icon: '✓', complete: true },
     extracting: { label: 'Finding dates & events...', icon: '⏳', complete: false },
     checking: { label: 'Checking existing calendar', icon: '⏳', complete: false },
@@ -45,7 +47,7 @@ export default function ProcessingStatusCard({
   };
 
   const getStageStatus = (stageName: ProcessingStage): 'complete' | 'active' | 'pending' => {
-    const stageOrder: ProcessingStage[] = ['uploading', 'uploaded', 'extracting', 'checking', 'complete'];
+    const stageOrder: ProcessingStage[] = ['uploading', 'compressing', 'uploaded', 'extracting', 'checking', 'complete'];
     const currentIndex = stageOrder.indexOf(stage);
     const stageIndex = stageOrder.indexOf(stageName);
 
@@ -82,6 +84,11 @@ export default function ProcessingStatusCard({
           <div
             className="h-2 rounded-full overflow-hidden"
             style={{ background: 'var(--color-background)' }}
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Processing ${fileName}: ${progress}% complete`}
           >
             <div
               className="h-full transition-all duration-300"
@@ -97,9 +104,9 @@ export default function ProcessingStatusCard({
         </div>
       )}
 
-      {/* Status steps */}
-      <div className="space-y-2">
-        {(['uploading', 'uploaded', 'extracting', 'checking'] as ProcessingStage[]).map((stageName) => {
+      {/* Status steps (visual only, no announcements) */}
+      <div className="space-y-2" aria-label="Processing stages">
+        {(['uploading', 'compressing', 'uploaded', 'extracting', 'checking'] as ProcessingStage[]).map((stageName) => {
           const status = getStageStatus(stageName);
           const config = stages[stageName];
 
@@ -115,6 +122,7 @@ export default function ProcessingStatusCard({
                       ? 'var(--color-primary)'
                       : 'var(--color-text-light)',
                 }}
+                aria-hidden="true"
               >
                 {status === 'complete' ? '✓' : status === 'active' ? config.icon : '○'}
               </span>
@@ -134,6 +142,7 @@ export default function ProcessingStatusCard({
                 <span
                   className="ml-auto text-sm animate-pulse"
                   style={{ color: 'var(--color-primary)' }}
+                  aria-label="In progress"
                 >
                   •••
                 </span>
@@ -142,6 +151,29 @@ export default function ProcessingStatusCard({
           );
         })}
       </div>
+
+      {/* Screen reader announcements (only for significant changes) */}
+      {(stage === 'error' || stage === 'complete') && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: 0,
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          {stage === 'error'
+            ? `Error: ${error || 'Processing failed'}`
+            : `Processing complete. Found ${eventsFound} ${eventsFound === 1 ? 'event' : 'events'}.`}
+        </div>
+      )}
 
       {/* Error message */}
       {error && stage === 'error' && (
