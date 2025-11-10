@@ -85,13 +85,7 @@ export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: 
 
   if (isCollapsed) {
     return (
-      <div
-        className="p-2"
-        style={{
-          background: 'var(--color-surface)',
-          borderLeft: '1px solid var(--color-border)',
-        }}
-      >
+      <div className="p-2 bg-gray-50 border-l border-gray-200">
         <button
           onClick={() => setIsCollapsed(false)}
           className="w-full p-2 rounded flex items-center justify-center"
@@ -118,22 +112,9 @@ export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: 
   }
 
   return (
-    <div
-      className="w-80 flex flex-col"
-      style={{
-        background: 'var(--color-surface)',
-        borderLeft: '1px solid var(--color-border)',
-        maxHeight: '100vh',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="w-80 flex flex-col h-full bg-gray-50 border-l border-gray-200 overflow-hidden">
       {/* Header */}
-      <div
-        className="p-4 flex items-center justify-between"
-        style={{
-          borderBottom: '1px solid var(--color-border)',
-        }}
-      >
+      <div className="p-4 flex items-center justify-between border-b border-gray-200">
         <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>
           Recent Uploads
         </h3>
