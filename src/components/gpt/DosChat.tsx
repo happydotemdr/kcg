@@ -9,6 +9,11 @@ import DosSidebar from './DosSidebar';
 import AppHeader from '../AppHeader';
 import DosLoadingIndicator from './DosLoadingIndicator';
 import ToolApprovalModal from './ToolApprovalModal';
+import QuickAdd from './widgets/QuickAdd';
+import WhatsNext from './widgets/WhatsNext';
+import Reschedule from './widgets/Reschedule';
+
+type ActiveWidget = 'quick-add' | 'whats-next' | 'reschedule' | null;
 
 export default function DosChat() {
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +36,9 @@ export default function DosChat() {
     toolArguments: Record<string, any>;
     timeoutMs: number;
   } | null>(null);
+
+  // Widget state
+  const [activeWidget, setActiveWidget] = useState<ActiveWidget>(null);
 
   // Initialize ChatKit
   const { control, setThreadId } = useChatKit({
@@ -370,6 +378,17 @@ export default function DosChat() {
     });
   }, [control]);
 
+  // Widget handlers
+  const handleWidgetSuccess = (eventId: string) => {
+    console.log('[DosChat] Widget action successful for event:', eventId);
+    setActiveWidget(null);
+    // Optionally refresh calendar or show notification
+  };
+
+  const handleWidgetClose = () => {
+    setActiveWidget(null);
+  };
+
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
       {/* Unified Header */}
@@ -404,8 +423,81 @@ export default function DosChat() {
               )}
             </div>
 
-            {/* Calendar Connection Status */}
-            <div className="flex items-center gap-4">
+            {/* Widget Actions & Calendar Connection */}
+            <div className="flex items-center gap-3">
+              {/* Widget Buttons (only show if calendar connected) */}
+              {calendarConnected && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveWidget('quick-add')}
+                    className="px-3 py-1.5 text-xs font-medium flex items-center gap-1"
+                    title="Quick Add Event"
+                    style={{
+                      background: 'var(--color-background)',
+                      color: 'var(--color-text)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      transition: 'all var(--transition-base)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--color-surface)';
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--color-background)';
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                    }}
+                  >
+                    📅 Quick Add
+                  </button>
+                  <button
+                    onClick={() => setActiveWidget('whats-next')}
+                    className="px-3 py-1.5 text-xs font-medium flex items-center gap-1"
+                    title="What's Next"
+                    style={{
+                      background: 'var(--color-background)',
+                      color: 'var(--color-text)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      transition: 'all var(--transition-base)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--color-surface)';
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--color-background)';
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                    }}
+                  >
+                    🕐 What's Next
+                  </button>
+                  <button
+                    onClick={() => setActiveWidget('reschedule')}
+                    className="px-3 py-1.5 text-xs font-medium flex items-center gap-1"
+                    title="Reschedule Event"
+                    style={{
+                      background: 'var(--color-background)',
+                      color: 'var(--color-text)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      transition: 'all var(--transition-base)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--color-surface)';
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--color-background)';
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                    }}
+                  >
+                    🔄 Reschedule
+                  </button>
+                </div>
+              )}
+
+              {/* Calendar Connection Status */}
               {calendarConnected ? (
                 <div className="flex items-center gap-2">
                   <span className="text-sm flex items-center gap-1" style={{ color: 'var(--color-success-text)' }}>
@@ -559,6 +651,25 @@ export default function DosChat() {
           background: var(--color-primary-dark);
         }
       `}</style>
+
+      {/* Widgets */}
+      {activeWidget === 'quick-add' && (
+        <QuickAdd
+          onClose={handleWidgetClose}
+          onSuccess={handleWidgetSuccess}
+        />
+      )}
+      {activeWidget === 'whats-next' && (
+        <WhatsNext
+          onClose={handleWidgetClose}
+        />
+      )}
+      {activeWidget === 'reschedule' && (
+        <Reschedule
+          onClose={handleWidgetClose}
+          onSuccess={handleWidgetSuccess}
+        />
+      )}
 
       {/* Tool Approval Modal */}
       {pendingApproval && (
