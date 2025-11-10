@@ -13,6 +13,11 @@ import DocumentUploadZone from './DocumentUploadZone';
 import DocumentHistory from './DocumentHistory';
 import ProcessingStatusCard, { type ProcessingStage } from './ProcessingStatusCard';
 import type { Message, Conversation } from '../../types/chat';
+import {
+  SUPPORTED_IMAGE_TYPES,
+  ERROR_DISPLAY_DURATION_MS,
+  MAX_FILES_PER_UPLOAD,
+} from '../../lib/constants/documents';
 
 export default function Chat() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -266,7 +271,6 @@ export default function Chat() {
 
         // Validate file type first (Claude Vision API only supports images)
         const isImage = file.type.startsWith('image/');
-        const supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (!isImage) {
           setUploadingDocuments((prev) => {
@@ -276,18 +280,18 @@ export default function Chat() {
           });
           setError(`${file.name}: Only image files are supported for now. PDF/DOCX support coming soon.`);
 
-          // Remove error indicator after 3 seconds
+          // Remove error indicator after configured duration
           setTimeout(() => {
             setUploadingDocuments((prev) => {
               const newMap = new Map(prev);
               newMap.delete(tempId);
               return newMap;
             });
-          }, 3000);
+          }, ERROR_DISPLAY_DURATION_MS);
           continue;
         }
 
-        if (!supportedImageTypes.includes(file.type)) {
+        if (!SUPPORTED_IMAGE_TYPES.includes(file.type as any)) {
           setUploadingDocuments((prev) => {
             const newMap = new Map(prev);
             newMap.set(tempId, 'error');
@@ -295,14 +299,14 @@ export default function Chat() {
           });
           setError(`${file.name}: Unsupported image format. Please use JPEG, PNG, GIF, or WebP.`);
 
-          // Remove error indicator after 3 seconds
+          // Remove error indicator after configured duration
           setTimeout(() => {
             setUploadingDocuments((prev) => {
               const newMap = new Map(prev);
               newMap.delete(tempId);
               return newMap;
             });
-          }, 3000);
+          }, ERROR_DISPLAY_DURATION_MS);
           continue;
         }
 
@@ -349,14 +353,14 @@ export default function Chat() {
           });
           setError(`Failed to process ${file.name}: ${fileErr instanceof Error ? fileErr.message : 'Unknown error'}`);
 
-          // Remove error indicator after 3 seconds
+          // Remove error indicator after configured duration
           setTimeout(() => {
             setUploadingDocuments((prev) => {
               const newMap = new Map(prev);
               newMap.delete(tempId);
               return newMap;
             });
-          }, 3000);
+          }, ERROR_DISPLAY_DURATION_MS);
         }
       }
     } catch (err) {
@@ -400,7 +404,7 @@ export default function Chat() {
               {/* Document Upload Button */}
               <button
                 onClick={() => setShowUploadZone(!showUploadZone)}
-                className="px-4 py-2 text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium flex items-center gap-2 relative"
                 style={{
                   background: showUploadZone ? 'var(--color-primary)' : 'var(--color-surface)',
                   color: showUploadZone ? 'var(--color-background)' : 'var(--color-text)',
@@ -423,6 +427,20 @@ export default function Chat() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 Upload Document
+                {/* Upload count badge */}
+                {uploadingDocuments.size > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: 'var(--color-warning, #f59e0b)',
+                      color: 'var(--color-background)',
+                      borderRadius: 'var(--radius-full)',
+                      border: '2px solid var(--color-background)',
+                    }}
+                  >
+                    {uploadingDocuments.size}
+                  </span>
+                )}
               </button>
 
               {/* Calendar Connection Button */}
@@ -488,7 +506,7 @@ export default function Chat() {
               <DocumentUploadZone
                 onUpload={handleDocumentUpload}
                 disabled={isStreaming}
-                maxFiles={3}
+                maxFiles={MAX_FILES_PER_UPLOAD}
               />
             </div>
           )}

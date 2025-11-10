@@ -32,4 +32,8 @@ export type {
   ProcessedDocument,
   CreateDocumentInput,
   UpdateDocumentInput,
+  DocumentWarning,
+  ExtractedEvent,
+  ExtractedData,
+  UserModification,
 } from './repositories/documents';

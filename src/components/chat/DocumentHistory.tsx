@@ -264,35 +264,46 @@ export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: 
       </div>
 
       {/* Refresh Button */}
-      {!isLoading && (
-        <div
-          className="p-3"
+      <div
+        className="p-3"
+        style={{
+          borderTop: '1px solid var(--color-border)',
+        }}
+      >
+        <button
+          onClick={fetchDocuments}
+          disabled={isLoading}
+          className="w-full py-2 px-3 rounded text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            borderTop: '1px solid var(--color-border)',
+            background: 'var(--color-background)',
+            color: 'var(--color-text-secondary)',
+            border: '1px solid var(--color-border)',
+            transition: 'all var(--transition-base)',
           }}
-        >
-          <button
-            onClick={fetchDocuments}
-            className="w-full py-2 px-3 rounded text-sm font-medium"
-            style={{
-              background: 'var(--color-background)',
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              transition: 'all var(--transition-base)',
-            }}
-            onMouseEnter={(e) => {
+          onMouseEnter={(e) => {
+            if (!isLoading) {
               e.currentTarget.style.borderColor = 'var(--color-primary)';
               e.currentTarget.style.color = 'var(--color-text)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-border)';
-              e.currentTarget.style.color = 'var(--color-text-secondary)';
-            }}
-          >
-            ↻ Refresh
-          </button>
-        </div>
-      )}
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)';
+            e.currentTarget.style.color = 'var(--color-text-secondary)';
+          }}
+        >
+          {isLoading ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Refreshing...
+            </>
+          ) : (
+            <>↻ Refresh</>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

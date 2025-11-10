@@ -7,6 +7,62 @@ import { query } from '../client';
 import type { QueryResult } from 'pg';
 
 /**
+ * Warning message from document processing
+ */
+export interface DocumentWarning {
+  code: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+  timestamp?: string;
+}
+
+/**
+ * Extracted calendar event from document
+ */
+export interface ExtractedEvent {
+  title: string;
+  date: string;
+  endDate?: string;
+  time?: string;
+  endTime?: string;
+  location?: string;
+  description?: string;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  isDuplicate?: boolean;
+  existingEventId?: string;
+  confidence?: number;
+}
+
+/**
+ * Extracted data structure from document processing
+ */
+export interface ExtractedData {
+  events: ExtractedEvent[];
+  summary?: {
+    totalEvents: number;
+    dateRange?: { start: string; end: string };
+    eventsByType?: Record<string, number>;
+  };
+  metadata?: {
+    processingMethod?: string;
+    modelUsed?: string;
+    processingDuration?: number;
+  };
+}
+
+/**
+ * User modification record
+ */
+export interface UserModification {
+  timestamp: string;
+  action: 'edit' | 'delete' | 'add';
+  eventId?: string;
+  changes?: Record<string, any>;
+  reason?: string;
+}
+
+/**
  * ProcessedDocument type matching the database schema
  */
 export interface ProcessedDocument {
@@ -21,12 +77,12 @@ export interface ProcessedDocument {
   processing_completed_at: Date | null;
   extracted_events_count: number;
   confidence_score: number | null;
-  warnings: any[];
+  warnings: DocumentWarning[];
   events_added: number;
   events_updated: number;
   events_skipped: number;
-  extracted_data: any;
-  user_modifications: any[];
+  extracted_data: ExtractedData;
+  user_modifications: UserModification[];
   uploaded_at: Date;
   created_at: Date;
   updated_at: Date;
@@ -53,12 +109,12 @@ export interface UpdateDocumentInput {
   processing_completed_at?: Date;
   extracted_events_count?: number;
   confidence_score?: number;
-  warnings?: any[];
+  warnings?: DocumentWarning[];
   events_added?: number;
   events_updated?: number;
   events_skipped?: number;
-  extracted_data?: any;
-  user_modifications?: any[];
+  extracted_data?: ExtractedData;
+  user_modifications?: UserModification[];
 }
 
 /**
@@ -264,10 +320,16 @@ export async function getDocumentStats(userId: string): Promise<{
   };
 }
 
+// Default number of days for recent documents
+const DEFAULT_RECENT_DAYS = 7;
+
 /**
- * Get recent document activity (last 7 days)
+ * Get recent document activity (last 7 days by default)
  */
-export async function getRecentDocuments(userId: string, days: number = 7): Promise<ProcessedDocument[]> {
+export async function getRecentDocuments(
+  userId: string,
+  days: number = DEFAULT_RECENT_DAYS
+): Promise<ProcessedDocument[]> {
   const result: QueryResult<ProcessedDocument> = await query(
     `SELECT * FROM processed_documents
     WHERE user_id = $1
