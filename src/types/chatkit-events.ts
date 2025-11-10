@@ -68,11 +68,20 @@ export interface EndOfTurnItem extends ThreadItemBase {
   type: 'end_of_turn';
 }
 
+export interface ToolApprovalItem extends ThreadItemBase {
+  type: 'tool_approval';
+  tool_name: string;
+  tool_arguments: Record<string, any>;
+  approval_id: string;  // Unique ID for matching approval response
+  timeout_ms: number;    // Milliseconds before auto-reject
+}
+
 export type ThreadItem =
   | UserMessageItem
   | AssistantMessageItem
   | ClientToolCallItem
-  | EndOfTurnItem;
+  | EndOfTurnItem
+  | ToolApprovalItem;
 
 // ============================================================================
 // Thread Object Structure
@@ -155,6 +164,14 @@ export interface NoticeEvent {
   level: 'info' | 'warning' | 'error';
 }
 
+export interface ToolApprovalRequestedEvent {
+  type: 'tool_approval_requested';
+  approval_id: string;
+  tool_name: string;
+  tool_arguments: Record<string, any>;
+  timeout_ms: number;
+}
+
 export type ThreadStreamEvent =
   | ThreadCreatedEvent
   | ThreadUpdatedEvent
@@ -165,4 +182,5 @@ export type ThreadStreamEvent =
   | ThreadItemReplacedEvent
   | ProgressUpdateEvent
   | ErrorEvent
-  | NoticeEvent;
+  | NoticeEvent
+  | ToolApprovalRequestedEvent;

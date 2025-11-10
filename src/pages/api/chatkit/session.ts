@@ -5,11 +5,13 @@
  * This endpoint is called by the frontend to obtain a client_secret
  * that authorizes the ChatKit component to communicate with our backend.
  *
- * For self-hosted ChatKit backend, we use a simple session approach
- * where the Clerk session is sufficient for authentication.
+ * For self-hosted ChatKit backend, we use a JWT-style token approach
+ * with HMAC signatures and expiry timestamps. Tokens are valid for 1 hour
+ * and can be refreshed via the /api/chatkit/refresh endpoint.
  */
 
 import type { APIRoute } from 'astro';
+import { generateClientSecret } from '../../../lib/chatkit-auth';
 
 export const prerender = false;
 
@@ -27,15 +29,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // For self-hosted backend, we just need to confirm auth
-    // The actual session is managed by Clerk
-    // Return a client_secret that ChatKit can use
-    const clientSecret = `chatkit_${userId}_${Date.now()}`;
+    // Generate client_secret with expiry using HMAC-signed token
+    const { clientSecret, expiresAt } = generateClientSecret(userId);
 
-    console.log('[ChatKit Session] Generated client secret for user:', userId);
+    console.log('[ChatKit Session] Generated client secret for user:', userId, 'expires at:', expiresAt);
 
     return new Response(
-      JSON.stringify({ client_secret: clientSecret }),
+      JSON.stringify({
+        client_secret: clientSecret,
+        expires_at: expiresAt
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
 

@@ -400,6 +400,63 @@ export const POST: APIRoute = async ({ request, locals }) => {
               });
 
               controller.close();
+            },
+
+            // onToolApproval: Handle tool approval requests
+            async (toolName: string, toolInput: any): Promise<boolean> => {
+              if (hasError) return false;
+
+              const approvalId = `approval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const timeoutMs = 30000; // 30 seconds
+
+              console.log('[ChatKit Backend] Tool approval required:', toolName, 'ID:', approvalId);
+
+              // Emit tool_approval_requested event to frontend
+              emitSSE(controller, {
+                type: 'tool_approval_requested',
+                approval_id: approvalId,
+                tool_name: toolName,
+                tool_arguments: toolInput,
+                timeout_ms: timeoutMs,
+              });
+
+              console.log('[ChatKit Backend] Emitted tool_approval_requested');
+
+              // Poll for approval decision
+              const startTime = Date.now();
+              const pollInterval = 500; // Check every 500ms
+
+              while (Date.now() - startTime < timeoutMs) {
+                try {
+                  // Check approval endpoint for decision
+                  const approvalRes = await fetch(
+                    `${request.url.split('/api/chatkit/backend')[0]}/api/chatkit/approve?approval_id=${approvalId}`,
+                    {
+                      headers: {
+                        'Cookie': request.headers.get('Cookie') || '', // Forward auth cookies
+                      },
+                    }
+                  );
+
+                  if (approvalRes.ok) {
+                    const { approved } = await approvalRes.json();
+
+                    if (approved !== null) {
+                      console.log('[ChatKit Backend] Approval decision received:', approved);
+                      return approved;
+                    }
+                  }
+                } catch (err) {
+                  console.error('[ChatKit Backend] Error polling for approval:', err);
+                }
+
+                // Wait before next poll
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+              }
+
+              // Timeout - auto-reject for safety
+              console.warn('[ChatKit Backend] Approval timeout, auto-rejecting:', toolName);
+              return false;
             }
           );
         } catch (error) {
