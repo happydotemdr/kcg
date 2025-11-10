@@ -15,7 +15,7 @@ import { generateClientSecret } from '../../../lib/chatkit-auth';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ locals }) => {
   try {
     // Authenticate with Clerk
     const { userId } = locals.auth();

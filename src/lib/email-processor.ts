@@ -8,7 +8,6 @@ import { gmailAgent } from './gmail-agent';
 import type { ProcessedEmail } from './gmail-agent';
 import {
   upsertEmailMetadata,
-  updateEmailClassification,
 } from './db/repositories/email-metadata';
 import { createProcessingLog } from './db/repositories/email-processing-log';
 import type { EmailImportance, ExtractedActions } from './db/types';
@@ -257,7 +256,7 @@ export class EmailProcessor {
    * Classify emails using Claude AI
    */
   private async classifyWithAI(
-    accountId: string,
+    _accountId: string,
     emails: ProcessedEmail[]
   ): Promise<Map<string, EmailClassification>> {
     console.log(`[EmailProcessor] Classifying ${emails.length} emails with AI`);

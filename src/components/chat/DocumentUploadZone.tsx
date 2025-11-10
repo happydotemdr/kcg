@@ -19,7 +19,6 @@ export default function DocumentUploadZone({
   maxFiles = 5,
 }: DocumentUploadZoneProps) {
   const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [dragCounter, setDragCounter] = useState(0);
 
   const stateConfig = {
     idle: {
@@ -56,7 +55,6 @@ export default function DocumentUploadZone({
 
     if (disabled) return;
 
-    setDragCounter((prev) => prev + 1);
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setUploadState('hovering');
     }
@@ -68,13 +66,10 @@ export default function DocumentUploadZone({
 
     if (disabled) return;
 
-    setDragCounter((prev) => {
-      const newCount = prev - 1;
-      if (newCount === 0) {
-        setUploadState('idle');
-      }
-      return newCount;
-    });
+    // Use relatedTarget to check if we're actually leaving the component
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setUploadState('idle');
+    }
   }, [disabled]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -88,7 +83,6 @@ export default function DocumentUploadZone({
 
     if (disabled) return;
 
-    setDragCounter(0);
     setUploadState('idle');
 
     const files = Array.from(e.dataTransfer.files);

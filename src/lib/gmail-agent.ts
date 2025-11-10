@@ -11,7 +11,6 @@ import {
   updateLastSyncedAt,
   isGmailTokenExpired,
 } from './db/repositories/gmail-accounts';
-import type { GmailAccount } from './db/types';
 
 // OAuth2 configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -190,7 +189,7 @@ export class GmailAgent {
    * Uses Gmail batch API to minimize API calls
    */
   private async batchFetchMessages(
-    gmail: gmail_v3.Gmail,
+    gmail: gmail_v1.Gmail,
     messageIds: string[]
   ): Promise<ProcessedEmail[]> {
     const batchSize = 50; // Gmail API batch limit
@@ -265,12 +264,12 @@ export class GmailAgent {
   /**
    * Extract attachment metadata without downloading
    */
-  private extractAttachmentInfo(payload: gmail_v3.Schema$MessagePart | undefined): AttachmentMetadata[] {
+  private extractAttachmentInfo(payload: gmail_v1.Schema$MessagePart | undefined): AttachmentMetadata[] {
     if (!payload) return [];
 
     const attachments: AttachmentMetadata[] = [];
 
-    const extractFromPart = (part: gmail_v3.Schema$MessagePart) => {
+    const extractFromPart = (part: gmail_v1.Schema$MessagePart) => {
       if (part.filename && part.body?.attachmentId) {
         attachments.push({
           filename: part.filename,
@@ -313,7 +312,7 @@ export class GmailAgent {
   /**
    * Extract plain text from email payload (avoid HTML)
    */
-  private extractPlainText(payload: gmail_v3.Schema$MessagePart | undefined): string {
+  private extractPlainText(payload: gmail_v1.Schema$MessagePart | undefined): string {
     if (!payload) return '';
 
     // Check if this part is plain text

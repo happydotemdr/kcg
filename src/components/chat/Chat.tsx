@@ -370,13 +370,13 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen flex-col" style={{ background: 'var(--color-surface)' }}>
+    <div className="flex h-screen flex-col bg-gray-50">
       {/* Unified Header */}
-      <div style={{ flexShrink: 0 }}>
+      <div className="flex-shrink-0">
         <AppHeader currentPage="chat" />
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Sidebar */}
         <ChatSidebar
           currentConversationId={conversation?.id}
@@ -386,12 +386,9 @@ export default function Chat() {
         />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* Conversation Info Bar */}
-          <div className="px-6 py-3 flex items-center justify-between" style={{
-            background: 'var(--color-background)',
-            borderBottom: '1px solid var(--color-border)'
-          }}>
+          <div className="flex-shrink-0 px-6 py-3 flex items-center justify-between bg-white border-b border-gray-200">
             <div className="flex-1">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
                 {conversation?.title || 'New Conversation'}
@@ -490,7 +487,7 @@ export default function Chat() {
           </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {error && (
             <div className="mx-6 mt-4 px-4 py-3" style={{
               background: 'var(--color-error-bg)',
@@ -609,7 +606,7 @@ export default function Chat() {
           </div>
 
           {/* Input Area */}
-          <div>
+          <div className="flex-shrink-0">
             {isStreaming && (
               <div className="px-6 py-2 text-sm" style={{
                 background: 'var(--color-warning-bg)',

@@ -17,7 +17,7 @@ import type { CalendarEntityType } from '../../../../lib/db/types';
 export const PUT: APIRoute = async ({ locals, params, request }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
+    const auth = locals.auth();
     if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -117,7 +117,7 @@ export const PUT: APIRoute = async ({ locals, params, request }) => {
 export const DELETE: APIRoute = async ({ locals, params }) => {
   try {
     // Check authentication
-    const auth = await locals.auth();
+    const auth = locals.auth();
     if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

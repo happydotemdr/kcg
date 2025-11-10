@@ -359,7 +359,7 @@ export function createGPTAgent(userId: string, systemPrompt?: string): Agent {
 export async function runAgentWithStreaming(
   agent: Agent,
   messages: Message[],
-  userId: string,
+  _userId: string,
   onText: (text: string) => void,
   onToolUse: (toolName: string, toolInput: any) => void,
   onComplete: (fullText: string) => void,
@@ -395,29 +395,18 @@ export async function runAgentWithStreaming(
       // Process streaming events with correct event types
       for await (const event of streamedResult) {
         // Handle raw model text streaming
-        // ✅ FIXED: Match Context7 docs for text delta extraction
+        // The event.data is a StreamEvent union type with discriminated type property
         if (event.type === 'raw_model_stream_event') {
-          const data = event.data as any;
-          // Primary format from Context7: event.delta.text
-          if (event.delta && typeof event.delta === 'object' && 'text' in event.delta) {
-            const textDelta = (event.delta as any).text;
+          const data = event.data;
+
+          // Check if this is an output_text_delta event (has delta property)
+          if (data.type === 'output_text_delta' && 'delta' in data) {
+            const textDelta = data.delta;
             if (textDelta) {
               accumulatedText += textDelta;
               onText(textDelta);
-              console.log('[Agents SDK] Text delta (primary):', textDelta.substring(0, 50));
+              console.log('[Agents SDK] Text delta:', textDelta.substring(0, 50));
             }
-          }
-          // Fallback formats for compatibility
-          else if (data.type === 'content.delta' && data.delta) {
-            const textDelta = data.delta;
-            accumulatedText += textDelta;
-            onText(textDelta);
-            console.log('[Agents SDK] Text delta (fallback 1):', textDelta.substring(0, 50));
-          }
-          else if (data.type === 'text_stream' && data.text) {
-            accumulatedText += data.text;
-            onText(data.text);
-            console.log('[Agents SDK] Text stream (fallback 2):', data.text.substring(0, 50));
           }
         }
 

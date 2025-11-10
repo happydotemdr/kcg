@@ -6,7 +6,6 @@
 import { google } from 'googleapis';
 import type { calendar_v3 } from 'googleapis';
 import { findTokenByUserId, upsertOAuthToken, isTokenExpired } from './db/repositories/google-oauth';
-import type { GoogleOAuthToken } from './db/types';
 
 // OAuth2 configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';

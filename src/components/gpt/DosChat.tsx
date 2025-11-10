@@ -33,7 +33,7 @@ export default function DosChat() {
   } | null>(null);
 
   // Initialize ChatKit
-  const { control, setThreadId, sendUserMessage } = useChatKit({
+  const { control, setThreadId } = useChatKit({
     api: {
       async getClientSecret(existingSecret: string | null) {
         try {

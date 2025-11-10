@@ -12,7 +12,7 @@ import { findUserByClerkId } from '../lib/db/repositories/users';
 initializeDatabase();
 
 // Check if user is authenticated
-const auth = await Astro.locals.auth();
+const auth = Astro.locals.auth();
 if (!auth?.userId) {
   return Astro.redirect('/sign-in');
 }
@@ -135,21 +135,19 @@ if (!dbUser) {
       </main>
     </div>
 
-    <script>
-      // Load calendars and mappings on page load
-      let availableCalendars = [];
-
+    <script is:inline>
       async function loadCalendars() {
         try {
           const response = await fetch('/api/calendar/calendars');
           const data = await response.json();
 
-          if (response.ok) {
-            availableCalendars = data.calendars;
+          if (response.ok && data.calendars) {
             const select = document.getElementById('calendar-select');
+            if (!select) return;
+
             select.innerHTML = '<option value="">Select a calendar...</option>';
 
-            data.calendars.forEach(cal => {
+            data.calendars.forEach((cal) => {
               const option = document.createElement('option');
               option.value = cal.id;
               option.textContent = `${cal.summary}${cal.primary ? ' (Primary)' : ''}`;
@@ -158,10 +156,11 @@ if (!dbUser) {
               select.appendChild(option);
             });
           } else {
-            showMessage('Failed to load calendars: ' + data.error, 'error');
+            showMessage('Failed to load calendars: ' + (data.error || 'Unknown error'), 'error');
           }
         } catch (error) {
-          showMessage('Error loading calendars: ' + error.message, 'error');
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showMessage('Error loading calendars: ' + errorMessage, 'error');
         }
       }
 
@@ -170,13 +169,14 @@ if (!dbUser) {
           const response = await fetch('/api/calendar/mappings');
           const data = await response.json();
 
-          if (response.ok) {
+          if (response.ok && data.mappings) {
             const container = document.getElementById('current-mappings');
+            if (!container) return;
 
             if (data.mappings.length === 0) {
               container.innerHTML = '<p class="text-muted">No calendar mappings yet. Add one below to get started.</p>';
             } else {
-              container.innerHTML = data.mappings.map(mapping => `
+              container.innerHTML = data.mappings.map((mapping) => `
                 <div class="mapping-item">
                   <div class="mapping-details">
                     <h3 class="mapping-title">${mapping.calendar_name}</h3>
@@ -198,15 +198,18 @@ if (!dbUser) {
               `).join('');
             }
           } else {
-            showMessage('Failed to load mappings: ' + data.error, 'error');
+            showMessage('Failed to load mappings: ' + (data.error || 'Unknown error'), 'error');
           }
         } catch (error) {
-          showMessage('Error loading mappings: ' + error.message, 'error');
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showMessage('Error loading mappings: ' + errorMessage, 'error');
         }
       }
 
       function showMessage(message, type = 'success') {
         const messageEl = document.getElementById('status-message');
+        if (!messageEl) return;
+
         messageEl.textContent = message;
         messageEl.className = type === 'success'
           ? 'alert alert-success'
@@ -234,10 +237,11 @@ if (!dbUser) {
             showMessage('Calendar mapping deleted successfully', 'success');
             await loadMappings();
           } else {
-            showMessage('Failed to delete mapping: ' + data.error, 'error');
+            showMessage('Failed to delete mapping: ' + (data.error || 'Unknown error'), 'error');
           }
         } catch (error) {
-          showMessage('Error deleting mapping: ' + error.message, 'error');
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showMessage('Error deleting mapping: ' + errorMessage, 'error');
         }
       }
 
@@ -245,55 +249,64 @@ if (!dbUser) {
       window.deleteMapping = deleteMapping;
 
       // Handle form submission
-      document.getElementById('add-mapping-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+      const addMappingForm = document.getElementById('add-mapping-form');
+      if (addMappingForm) {
+        addMappingForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
 
-        const calendarSelect = document.getElementById('calendar-select');
-        const entityTypeSelect = document.getElementById('entity-type-select');
-        const isDefaultCheckbox = document.getElementById('is-default-checkbox');
+          const calendarSelect = document.getElementById('calendar-select');
+          const entityTypeSelect = document.getElementById('entity-type-select');
+          const isDefaultCheckbox = document.getElementById('is-default-checkbox');
 
-        const selectedOption = calendarSelect.options[calendarSelect.selectedIndex];
-        const googleCalendarId = calendarSelect.value;
-        const calendarName = selectedOption.dataset.name;
-        const calendarTimeZone = selectedOption.dataset.timezone;
-        const entityType = entityTypeSelect.value;
-        const isDefault = isDefaultCheckbox.checked;
-
-        if (!googleCalendarId || !entityType) {
-          showMessage('Please select both a calendar and entity type', 'error');
-          return;
-        }
-
-        try {
-          const response = await fetch('/api/calendar/mappings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              google_calendar_id: googleCalendarId,
-              calendar_name: calendarName,
-              entity_type: entityType,
-              is_default: isDefault,
-              calendar_time_zone: calendarTimeZone,
-            }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            showMessage('Calendar mapping created successfully!', 'success');
-            await loadMappings();
-
-            // Reset form
-            document.getElementById('add-mapping-form').reset();
-          } else {
-            showMessage('Failed to create mapping: ' + data.error, 'error');
+          if (!calendarSelect || !entityTypeSelect || !isDefaultCheckbox) {
+            showMessage('Form elements not found', 'error');
+            return;
           }
-        } catch (error) {
-          showMessage('Error creating mapping: ' + error.message, 'error');
-        }
-      });
+
+          const selectedOption = calendarSelect.options[calendarSelect.selectedIndex];
+          const googleCalendarId = calendarSelect.value;
+          const calendarName = selectedOption?.dataset.name || '';
+          const calendarTimeZone = selectedOption?.dataset.timezone || '';
+          const entityType = entityTypeSelect.value;
+          const isDefault = isDefaultCheckbox.checked;
+
+          if (!googleCalendarId || !entityType) {
+            showMessage('Please select both a calendar and entity type', 'error');
+            return;
+          }
+
+          try {
+            const response = await fetch('/api/calendar/mappings', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                google_calendar_id: googleCalendarId,
+                calendar_name: calendarName,
+                entity_type: entityType,
+                is_default: isDefault,
+                calendar_time_zone: calendarTimeZone,
+              }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              showMessage('Calendar mapping created successfully!', 'success');
+              await loadMappings();
+
+              // Reset form
+              addMappingForm.reset();
+            } else {
+              showMessage('Failed to create mapping: ' + (data.error || 'Unknown error'), 'error');
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showMessage('Error creating mapping: ' + errorMessage, 'error');
+          }
+        });
+      }
 
       // Load data on page load
       loadCalendars();
