@@ -1,0 +1,52 @@
+---
+/**
+ * Usage Dashboard Page
+ * Protected page for viewing AI usage analytics and costs
+ */
+import AppHeader from '@components/AppHeader';
+import UsageDashboard from '@components/usage/UsageDashboard';
+
+export const prerender = false;
+
+// Check authentication
+const { userId } = Astro.locals.auth();
+
+// Redirect to sign-in if not authenticated
+if (!userId) {
+  return Astro.redirect('/sign-in?redirect_url=/usage');
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Usage & Costs - Keep Choosing Good</title>
+    <meta name="description" content="Track your AI usage, token costs, and conversation analytics" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+  </head>
+  <body>
+    <!-- Unified Header -->
+    <AppHeader currentPage="usage" client:only="react" />
+
+    <!-- Dashboard Content -->
+    <UsageDashboard client:load />
+  </body>
+</html>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif);
+    background: var(--color-background, #f9fafb);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+</style>

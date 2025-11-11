@@ -27,6 +27,34 @@ const client = new Anthropic({
 });
 
 /**
+ * Usage data structure for tracking Claude API calls
+ */
+export interface UsageData {
+  message_id: string;
+  request_id: string;
+  model: string;
+  stop_reason: string;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens: number;
+    cache_read_input_tokens: number;
+  };
+  response_time_ms: number;
+  tool_calls_count: number;
+}
+
+/**
+ * Tool execution result with timing information
+ */
+export interface ToolExecutionResult {
+  success: boolean;
+  result?: string;
+  error?: string;
+  execution_time_ms: number;
+}
+
+/**
  * Default model - Claude Sonnet 4
  * Using the latest stable model as recommended by Anthropic
  */
@@ -529,14 +557,18 @@ async function executeTool(
   toolInput: any,
   userId: string,
   userMessage: string = ''
-): Promise<{ success: boolean; result?: string; error?: string }> {
+): Promise<ToolExecutionResult> {
+  const toolStartTime = Date.now();
+
   try {
     // Check if calendar is connected for all calendar operations
     const connected = await isCalendarConnected(userId);
     if (!connected) {
+      const toolExecutionTime = Date.now() - toolStartTime;
       return {
         success: false,
         error: 'Google Calendar is not connected. Please connect your calendar first by clicking the "Connect Calendar" button.',
+        execution_time_ms: toolExecutionTime,
       };
     }
 
@@ -555,9 +587,11 @@ async function executeTool(
 
       const calendarInfo = formatCalendarSelectionMessage(selection);
 
+      const toolExecutionTime = Date.now() - toolStartTime;
       return {
         success: true,
         result: `${calendarInfo}\n\n${formattedEvents}`,
+        execution_time_ms: toolExecutionTime,
       };
     }
 
@@ -585,9 +619,11 @@ async function executeTool(
       } else if (toolInput.start_date) {
         eventParams.start.date = toolInput.start_date;
       } else {
+        const toolExecutionTime = Date.now() - toolStartTime;
         return {
           success: false,
           error: 'Event must have a start time (start_datetime or start_date)',
+          execution_time_ms: toolExecutionTime,
         };
       }
 
@@ -597,9 +633,11 @@ async function executeTool(
       } else if (toolInput.end_date) {
         eventParams.end.date = toolInput.end_date;
       } else {
+        const toolExecutionTime = Date.now() - toolStartTime;
         return {
           success: false,
           error: 'Event must have an end time (end_datetime or end_date)',
+          execution_time_ms: toolExecutionTime,
         };
       }
 
@@ -612,9 +650,11 @@ async function executeTool(
       const createdEvent = await createEvent(userId, eventParams, selection.calendarId);
       const calendarInfo = formatCalendarSelectionMessage(selection);
 
+      const toolExecutionTime = Date.now() - toolStartTime;
       return {
         success: true,
         result: `${calendarInfo}\n\nEvent created successfully:\n\n**${createdEvent.summary}**\n📅 ${createdEvent.start.dateTime || createdEvent.start.date}\n${createdEvent.location ? `📍 ${createdEvent.location}\n` : ''}🔗 ${createdEvent.htmlLink}`,
+        execution_time_ms: toolExecutionTime,
       };
     }
 
@@ -622,9 +662,11 @@ async function executeTool(
     if (toolName === 'update_calendar_event') {
       const eventId = toolInput.event_id;
       if (!eventId) {
+        const toolExecutionTime = Date.now() - toolStartTime;
         return {
           success: false,
           error: 'Event ID is required to update an event',
+          execution_time_ms: toolExecutionTime,
         };
       }
 
@@ -672,9 +714,11 @@ async function executeTool(
       const updatedEvent = await updateEvent(userId, updateParams, selection.calendarId);
       const calendarInfo = formatCalendarSelectionMessage(selection);
 
+      const toolExecutionTime = Date.now() - toolStartTime;
       return {
         success: true,
         result: `${calendarInfo}\n\nEvent updated successfully:\n\n**${updatedEvent.summary}**\n📅 ${updatedEvent.start.dateTime || updatedEvent.start.date}\n${updatedEvent.location ? `📍 ${updatedEvent.location}\n` : ''}🔗 ${updatedEvent.htmlLink}`,
+        execution_time_ms: toolExecutionTime,
       };
     }
 
@@ -682,9 +726,11 @@ async function executeTool(
     if (toolName === 'delete_calendar_event') {
       const eventId = toolInput.event_id;
       if (!eventId) {
+        const toolExecutionTime = Date.now() - toolStartTime;
         return {
           success: false,
           error: 'Event ID is required to delete an event',
+          execution_time_ms: toolExecutionTime,
         };
       }
 
@@ -708,21 +754,27 @@ async function executeTool(
       await deleteEvent(userId, eventId, selection.calendarId);
       const calendarInfo = formatCalendarSelectionMessage(selection);
 
+      const toolExecutionTime = Date.now() - toolStartTime;
       return {
         success: true,
         result: `${calendarInfo}\n\nEvent "${eventSummary}" has been deleted successfully.`,
+        execution_time_ms: toolExecutionTime,
       };
     }
 
+    const toolExecutionTime = Date.now() - toolStartTime;
     return {
       success: false,
       error: `Unknown tool: ${toolName}`,
+      execution_time_ms: toolExecutionTime,
     };
   } catch (error) {
+    const toolExecutionTime = Date.now() - toolStartTime;
     console.error(`[Tool:${toolName}] Error:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
+      execution_time_ms: toolExecutionTime,
     };
   }
 }
@@ -739,6 +791,8 @@ async function executeTool(
  * @param onError - Callback for errors
  * @param model - Model to use
  * @param systemPrompt - System prompt for Claude
+ * @param onUsageData - Optional callback for usage tracking
+ * @param onToolComplete - Optional callback when tool execution completes
  */
 export async function streamChatCompletionWithTools(
   messages: Message[],
@@ -748,7 +802,9 @@ export async function streamChatCompletionWithTools(
   onComplete: (fullText: string) => void,
   onError: (error: Error) => void,
   model: string = DEFAULT_MODEL,
-  systemPrompt: string = DEFAULT_SYSTEM_PROMPT
+  systemPrompt: string = DEFAULT_SYSTEM_PROMPT,
+  onUsageData?: (usageData: UsageData) => void,
+  onToolComplete?: (toolName: string, toolInput: any, executionResult: ToolExecutionResult) => void
 ): Promise<void> {
   try {
     // Convert messages to Anthropic format
@@ -756,6 +812,8 @@ export async function streamChatCompletionWithTools(
     let fullText = '';
     const maxIterations = 5; // Prevent infinite loops
     let iteration = 0;
+    const requestStartTime = Date.now();
+    let totalToolCallsCount = 0;
 
     // Get the user's latest message for context in calendar selection
     const userMessage = messages.length > 0 && messages[messages.length - 1].role === 'user'
@@ -793,6 +851,12 @@ export async function streamChatCompletionWithTools(
       // Wait for final message
       currentResponse = await stream.finalMessage();
 
+      // Count tool uses in this iteration
+      const toolCallsInIteration = currentResponse.content.filter(
+        (block: any) => block.type === 'tool_use'
+      ).length;
+      totalToolCallsCount += toolCallsInIteration;
+
       // Check if Claude used a tool
       const toolUseBlocks = currentResponse.content.filter(
         (block: any) => block.type === 'tool_use'
@@ -808,6 +872,11 @@ export async function streamChatCompletionWithTools(
 
           // Execute the tool with user message context for calendar selection
           const toolResult = await executeTool(toolName, toolInput, userId, userMessage);
+
+          // Notify tool completion if callback provided
+          if (onToolComplete) {
+            onToolComplete(toolName, toolInput, toolResult);
+          }
 
           // Add assistant's response (with tool_use) to messages
           anthropicMessages.push({
@@ -834,7 +903,27 @@ export async function streamChatCompletionWithTools(
         continue;
       }
 
-      // No tools used, we're done
+      // No tools used, this is the final response
+      // Track response time and emit usage data
+      if (onUsageData) {
+        const responseTimeMs = Date.now() - requestStartTime;
+
+        onUsageData({
+          message_id: currentResponse.id,
+          request_id: (currentResponse as any)._request_id || '',
+          model: currentResponse.model,
+          stop_reason: currentResponse.stop_reason,
+          usage: {
+            input_tokens: currentResponse.usage.input_tokens,
+            output_tokens: currentResponse.usage.output_tokens,
+            cache_creation_input_tokens: currentResponse.usage.cache_creation_input_tokens || 0,
+            cache_read_input_tokens: currentResponse.usage.cache_read_input_tokens || 0,
+          },
+          response_time_ms: responseTimeMs,
+          tool_calls_count: totalToolCallsCount,
+        });
+      }
+
       break;
     }
 
