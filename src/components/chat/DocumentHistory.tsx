@@ -9,6 +9,7 @@ import type { ProcessedDocument } from '../../lib/db/repositories/documents';
 interface DocumentHistoryProps {
   onViewDocument?: (documentId: string) => void;
   refreshTrigger?: number; // Increment to trigger refresh
+  nested?: boolean; // When true, renders in compact mode for nesting inside AgentCard
 }
 
 interface DocumentStats {
@@ -19,11 +20,11 @@ interface DocumentStats {
   total_events_added: number;
 }
 
-export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: DocumentHistoryProps) {
+export default function DocumentHistory({ onViewDocument, refreshTrigger = 0, nested = false }: DocumentHistoryProps) {
   const [documents, setDocuments] = useState<ProcessedDocument[]>([]);
   const [stats, setStats] = useState<DocumentStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(nested); // Start collapsed if nested
   const [error, setError] = useState<string | null>(null);
 
   const fetchDocuments = async () => {
@@ -83,7 +84,38 @@ export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: 
     return then.toLocaleDateString();
   };
 
-  if (isCollapsed) {
+  // Nested mode: Collapsible section header
+  if (nested && isCollapsed) {
+    return (
+      <button
+        onClick={() => setIsCollapsed(false)}
+        className="w-full p-2 rounded flex items-center justify-between text-xs"
+        style={{
+          background: 'var(--color-surface)',
+          color: 'var(--color-text-secondary)',
+          border: '1px solid var(--color-border)',
+          transition: 'all var(--transition-base)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'var(--color-primary)';
+          e.currentTarget.style.color = 'var(--color-text)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'var(--color-border)';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }}
+        title="Show recent uploads"
+      >
+        <span>📄 Recent Uploads ({documents.length})</span>
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+    );
+  }
+
+  // Full mode: Sidebar collapse button
+  if (!nested && isCollapsed) {
     return (
       <div className="p-2 bg-gray-50 border-l border-gray-200">
         <button
@@ -111,6 +143,102 @@ export default function DocumentHistory({ onViewDocument, refreshTrigger = 0 }: 
     );
   }
 
+  // Nested mode: Compact rendering
+  if (nested) {
+    return (
+      <div className="flex flex-col">
+        {/* Compact Header */}
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="w-full p-2 rounded flex items-center justify-between text-xs mb-2"
+          style={{
+            background: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+            transition: 'all var(--transition-base)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)';
+          }}
+          title="Hide uploads"
+        >
+          <span className="font-semibold">📄 Recent Uploads</span>
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+
+        {/* Document List - Compact */}
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {isLoading ? (
+            <div className="text-center py-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <div className="text-lg mb-1">⏳</div>
+              <p>Loading...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-4 text-xs" style={{ color: 'var(--color-error, #ef4444)' }}>
+              <p>{error}</p>
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <div className="text-2xl mb-1">📭</div>
+              <p>No recent uploads</p>
+            </div>
+          ) : (
+            documents.slice(0, 5).map((doc) => {
+              const statusDisplay = getStatusDisplay(doc.status);
+              return (
+                <div
+                  key={doc.id}
+                  className="p-2 rounded cursor-pointer text-xs"
+                  style={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    transition: 'all var(--transition-base)',
+                  }}
+                  onClick={() => onViewDocument?.(doc.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm">📄</span>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-medium truncate"
+                        style={{ color: 'var(--color-text)' }}
+                        title={doc.file_name}
+                      >
+                        {doc.file_name}
+                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <span style={{ color: statusDisplay.color }}>
+                          {statusDisplay.icon}
+                        </span>
+                        {doc.events_added > 0 && (
+                          <span style={{ color: 'var(--color-success-text, #10b981)' }}>
+                            +{doc.events_added}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode: Full sidebar rendering
   return (
     <div className="w-80 flex flex-col h-full bg-gray-50 border-l border-gray-200 overflow-hidden">
       {/* Header */}

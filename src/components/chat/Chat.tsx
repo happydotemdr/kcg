@@ -10,7 +10,7 @@ import ChatInput from './ChatInput';
 import ChatSidebar from './ChatSidebar';
 import AppHeader from '../AppHeader';
 import DocumentUploadZone from './DocumentUploadZone';
-import DocumentHistory from './DocumentHistory';
+import AgentsToolsPanel from './AgentsToolsPanel';
 import ProcessingStatusCard, { type ProcessingStage } from './ProcessingStatusCard';
 import type { Message, Conversation } from '../../types/chat';
 import {
@@ -263,7 +263,7 @@ export default function Chat() {
   // NOTE: This is a synchronous flow - files are sent directly to Claude for analysis
   // The "uploading" status is just UI feedback during the operation
   // No background processing or status polling is needed
-  const handleDocumentUpload = async (files: File[]) => {
+  const handleDocumentUpload = async (files: File[], intentType?: 'calendar' | 'gmail' | 'generic') => {
     // Track batch processing results
     const results = {
       succeeded: [] as string[],
@@ -454,7 +454,18 @@ export default function Chat() {
           });
 
           // Send document directly to Claude for synchronous processing
-          const message = `I've uploaded "${file.name}". Please analyze this document and extract any calendar events you find. Look for dates, times, event names, locations, and recurring patterns. Present the events in a clear format and ask if I'd like to add them to my calendar.`;
+          // Use context-aware prompt based on intent type
+          let message: string;
+          switch (intentType) {
+            case 'calendar':
+              message = `I've uploaded "${file.name}". Please analyze this document and extract any calendar events you find. Look for dates, times, event names, locations, and recurring patterns. Present the events in a clear format and ask if I'd like to add them to my calendar.`;
+              break;
+            case 'gmail':
+              message = `Please analyze this email screenshot ("${file.name}") and extract key information including sender, subject, important dates, actions required, and classify its priority. Let me know if I need to take any action.`;
+              break;
+            default:
+              message = `I've uploaded "${file.name}". Please analyze this document and extract any calendar events you find. Look for dates, times, event names, locations, and recurring patterns. Present the events in a clear format and ask if I'd like to add them to my calendar.`;
+          }
 
           await handleSendMessage(message, [{
             data: base64Data,
@@ -815,10 +826,10 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Document History Sidebar */}
-        <DocumentHistory
-          onViewDocument={(id) => console.log('View document:', id)}
-          refreshTrigger={documentRefreshTrigger}
+        {/* Agents & Tools Panel */}
+        <AgentsToolsPanel
+          onDocumentUpload={handleDocumentUpload}
+          documentRefreshTrigger={documentRefreshTrigger}
         />
       </div>
     </div>

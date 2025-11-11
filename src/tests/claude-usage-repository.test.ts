@@ -644,9 +644,9 @@ describe('Claude Usage Repository Integration Tests', () => {
       const pricing = await getModelPricing('claude-sonnet-4-20250514', effectiveDate);
 
       expect(pricing).toBeDefined();
-      expect(pricing!.effective_from).toBeLessThanOrEqual(effectiveDate);
+      expect(pricing!.effective_from).toBeLessThanOrEqual(effectiveDate.getTime());
       if (pricing!.effective_until) {
-        expect(pricing!.effective_until).toBeGreaterThanOrEqual(effectiveDate);
+        expect(pricing!.effective_until).toBeGreaterThanOrEqual(effectiveDate.getTime());
       }
     });
   });
