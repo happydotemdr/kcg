@@ -6,16 +6,29 @@
 import { google } from 'googleapis';
 import type { calendar_v3 } from 'googleapis';
 import { findTokenByUserId, upsertOAuthToken, isTokenExpired } from './db/repositories/google-oauth';
+import * as emailContactsRepo from './db/repositories/email-contacts';
+import { inferGoogleAccount } from './account-inference';
 
 // OAuth2 configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4321/api/auth/google/callback';
 
-// Required scopes for calendar access (full CRUD permissions)
+// Required scopes for calendar AND Gmail access (unified OAuth)
 export const CALENDAR_SCOPES = [
+  // User info scope (to get email address)
+  'https://www.googleapis.com/auth/userinfo.email', // Get user's email address
+  'https://www.googleapis.com/auth/userinfo.profile', // Get user's profile info
+
+  // Calendar scopes (full CRUD permissions)
   'https://www.googleapis.com/auth/calendar', // Full calendar access for CRUD operations
   'https://www.googleapis.com/auth/calendar.events', // Full event access
+
+  // Gmail scopes (read, compose, modify)
+  'https://www.googleapis.com/auth/gmail.readonly', // Read all emails
+  'https://www.googleapis.com/auth/gmail.compose', // Create and send emails
+  'https://www.googleapis.com/auth/gmail.modify', // Modify emails (labels, etc)
+  'https://mail.google.com/', // Full Gmail access (includes all above)
 ];
 
 /**
@@ -53,8 +66,8 @@ export async function exchangeCodeForTokens(code: string) {
 /**
  * Get OAuth2 client configured with user's credentials
  */
-async function getAuthenticatedClient(userId: string) {
-  const tokenData = await findTokenByUserId(userId);
+async function getAuthenticatedClient(userId: string, googleAccountEmail?: string) {
+  const tokenData = await findTokenByUserId(userId, googleAccountEmail);
 
   if (!tokenData) {
     throw new Error('No Google Calendar connection found. Please connect your calendar first.');
@@ -74,6 +87,7 @@ async function getAuthenticatedClient(userId: string) {
     if (tokens.refresh_token || tokenData.refresh_token) {
       await upsertOAuthToken({
         user_id: userId,
+        google_account_email: tokenData.google_account_email,
         access_token: tokens.access_token!,
         refresh_token: tokens.refresh_token || tokenData.refresh_token,
         token_type: tokens.token_type || 'Bearer',
@@ -327,10 +341,32 @@ export async function listCalendars(userId: string): Promise<GoogleCalendarListI
 export async function createEvent(
   userId: string,
   params: CreateEventParams,
-  calendarId: string = 'primary'
+  calendarId: string = 'primary',
+  clerkUserId?: string
 ): Promise<CalendarEvent> {
   try {
-    const auth = await getAuthenticatedClient(userId);
+    // Use smart account inference if clerkUserId is provided
+    let googleAccountEmail: string | undefined;
+    if (clerkUserId) {
+      const inference = await inferGoogleAccount(clerkUserId, {
+        eventDetails: {
+          summary: params.summary,
+          description: params.description,
+          attendees: params.attendees?.map(a => a.email),
+        },
+      });
+
+      // Use suggested account if confidence is high enough
+      if (inference.confidence > 0.7 && inference.suggestedEmail) {
+        googleAccountEmail = inference.suggestedEmail;
+        console.log(`[Calendar] Using inferred account: ${googleAccountEmail} (confidence: ${inference.confidence})`);
+        console.log(`[Calendar] Reasoning: ${inference.reasoning}`);
+      } else if (inference.fallbackToPrimary) {
+        console.log(`[Calendar] Using primary account (${inference.reasoning})`);
+      }
+    }
+
+    const auth = await getAuthenticatedClient(userId, googleAccountEmail);
     const calendar = google.calendar({ version: 'v3', auth });
 
     console.log(`[Calendar] Creating event on calendar ${calendarId} for user ${userId}:`, params.summary);
@@ -387,10 +423,32 @@ export async function createEvent(
 export async function updateEvent(
   userId: string,
   params: UpdateEventParams,
-  calendarId: string = 'primary'
+  calendarId: string = 'primary',
+  clerkUserId?: string
 ): Promise<CalendarEvent> {
   try {
-    const auth = await getAuthenticatedClient(userId);
+    // Use smart account inference if clerkUserId is provided
+    let googleAccountEmail: string | undefined;
+    if (clerkUserId) {
+      const inference = await inferGoogleAccount(clerkUserId, {
+        eventDetails: {
+          summary: params.summary,
+          description: params.description,
+          attendees: params.attendees?.map(a => a.email),
+        },
+      });
+
+      // Use suggested account if confidence is high enough
+      if (inference.confidence > 0.7 && inference.suggestedEmail) {
+        googleAccountEmail = inference.suggestedEmail;
+        console.log(`[Calendar] Using inferred account: ${googleAccountEmail} (confidence: ${inference.confidence})`);
+        console.log(`[Calendar] Reasoning: ${inference.reasoning}`);
+      } else if (inference.fallbackToPrimary) {
+        console.log(`[Calendar] Using primary account (${inference.reasoning})`);
+      }
+    }
+
+    const auth = await getAuthenticatedClient(userId, googleAccountEmail);
     const calendar = google.calendar({ version: 'v3', auth });
 
     const { eventId, ...updates } = params;
@@ -516,4 +574,21 @@ export async function getEvent(
     console.error('[Calendar] Error fetching event:', error);
     throw new Error(`Failed to fetch event: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+/**
+ * Check contact trust level for calendar event automation
+ * Returns trust status, confidence score, and auto-approval eligibility
+ */
+export async function checkContactTrust(userId: string, senderEmail: string) {
+  const contact = await emailContactsRepo.findByEmail(userId, senderEmail);
+  if (!contact) {
+    return { trusted: false, confidence: 0, autoApprove: false };
+  }
+
+  return {
+    trusted: contact.verification_status === 'verified',
+    confidence: contact.confidence_score,
+    autoApprove: contact.verification_status === 'verified' && contact.confidence_score > 0.8,
+  };
 }

@@ -82,11 +82,14 @@ export type CreateClerkWebhookEvent = Omit<ClerkWebhookEvent, 'id' | 'created_at
 export interface GoogleOAuthToken {
   id: string;
   user_id: string;
+  google_account_email: string | null;
   access_token: string;
   refresh_token: string | null;
   token_type: string;
   expiry_date: number | null; // Unix timestamp in milliseconds
   scope: string | null;
+  account_label?: string; // User-friendly label (e.g., "Work Email", "Personal")
+  is_primary?: boolean; // True if this is the user's primary Google account
   created_at: Date;
   updated_at: Date;
 }
@@ -157,20 +160,14 @@ export interface GmailSyncSettings {
 
 /**
  * Gmail Account
- * Represents a connected Gmail account with OAuth tokens
+ * Represents a connected Gmail account (tokens stored in google_oauth_tokens)
  */
 export interface GmailAccount {
   id: string;
   user_id: string;
   email: string;
   account_type: GmailAccountType;
-
-  // OAuth tokens
-  gmail_access_token: string;
-  gmail_refresh_token: string | null;
-  gmail_token_type: string;
-  gmail_expiry_date: number | null;
-  gmail_scope: string | null;
+  google_account_email: string; // References google_account_email in google_oauth_tokens
 
   // Sync settings
   sync_settings: GmailSyncSettings;
@@ -364,3 +361,136 @@ export type CreateEmailProcessingLog = Omit<EmailProcessingLog, 'id' | 'created_
   id?: string;
   created_at?: Date;
 };
+
+/**
+ * Contact Verification Queue Item
+ * AI suggestions for contact classification awaiting user verification
+ */
+export interface VerificationQueueItem {
+  id: string;
+  user_id: string;
+  contact_id: string;
+
+  // AI suggestions
+  suggested_type: string | null; // 'coach', 'teacher', 'school_admin', 'team', 'club', 'therapist', 'medical', 'vendor', 'other'
+  suggested_tags: string[] | null;
+  reasoning: string | null;
+  confidence: number | null; // 0-1
+
+  // Supporting evidence
+  sample_email_ids: string[] | null; // email_metadata IDs
+
+  // Queue status
+  status: 'pending' | 'approved' | 'rejected' | 'modified';
+  user_action_at: Date | null;
+
+  // Timestamp
+  created_at: Date;
+}
+
+export type CreateVerificationQueueItem = Omit<
+  VerificationQueueItem,
+  'id' | 'created_at' | 'status' | 'user_action_at'
+> & {
+  id?: string;
+  created_at?: Date;
+  status?: 'pending';
+  user_action_at?: Date | null;
+};
+
+// ============================================================================
+// Email Contacts Types
+// ============================================================================
+
+/**
+ * Contact Source Type
+ */
+export type ContactSourceType = 'coach' | 'teacher' | 'school_admin' | 'team' | 'club' | 'therapist' | 'medical' | 'vendor' | 'other';
+
+/**
+ * Contact Verification Status
+ */
+export type ContactVerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
+
+/**
+ * Email Contact
+ */
+export interface EmailContact {
+  id: string;
+  user_id: string; // Clerk user ID
+
+  // Contact information
+  email: string;
+  display_name: string | null;
+  organization: string | null;
+  domain: string | null;
+  phone_numbers: string[];
+  addresses: string[];
+
+  // Classification
+  source_type: ContactSourceType | null;
+  tags: string[];
+
+  // Verification workflow
+  verification_status: ContactVerificationStatus;
+  verification_method: string | null;
+  verified_at: Date | null;
+  verified_by: string | null;
+
+  // Confidence and frequency
+  confidence_score: number;
+  email_count: number;
+
+  // Temporal tracking
+  first_seen: Date;
+  last_seen: Date;
+
+  // Relationships
+  linked_calendar_events: string[];
+  linked_family_members: string[];
+
+  // Metadata
+  extraction_metadata: Record<string, any> | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateEmailContact = Omit<EmailContact, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
+/**
+ * Contact Filters
+ */
+export interface ContactFilters {
+  sourceType?: ContactSourceType;
+  verificationStatus?: ContactVerificationStatus;
+  tags?: string[];
+  domain?: string;
+  minConfidence?: number;
+  minEmailCount?: number;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Email Contact Association
+ */
+export type ContactAssociationRole = 'sender' | 'recipient' | 'mentioned';
+
+export interface EmailContactAssociation {
+  id: string;
+  email_metadata_id: string;
+  contact_id: string;
+  role: ContactAssociationRole;
+  extracted_at: Date;
+  extraction_confidence: number;
+}
+
+export type CreateEmailContactAssociation = Omit<EmailContactAssociation, 'id' | 'extracted_at'> & {
+  id?: string;
+  extracted_at?: Date;
+}

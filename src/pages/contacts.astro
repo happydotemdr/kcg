@@ -1,0 +1,369 @@
+---
+/**
+ * Contacts Management Page
+ * Manage verification queue and view all contacts
+ */
+
+import AppHeader from '@components/AppHeader';
+import VerificationQueue from '@components/contacts/VerificationQueue';
+import ContactList from '@components/contacts/ContactList';
+import { initializeDatabase } from '../lib/db';
+import { findUserByClerkId } from '../lib/db/repositories/users';
+
+// Initialize database
+initializeDatabase();
+
+// Check if user is authenticated
+const auth = Astro.locals.auth();
+if (!auth?.userId) {
+  return Astro.redirect('/sign-in');
+}
+
+// Get database user
+const dbUser = await findUserByClerkId(auth.userId);
+if (!dbUser) {
+  return new Response('User not found', { status: 404 });
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contacts - Keep Choosing Good</title>
+    <meta name="description" content="Manage your email contacts and verification queue" />
+
+    <!-- Design Tokens -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+  </head>
+  <body>
+    <div class="contacts-page">
+      <!-- Unified Header -->
+      <AppHeader currentPage="contacts" client:only="react" />
+
+      <!-- Welcome Section with Stats -->
+      <div class="welcome-section">
+        <div class="welcome-header">
+          <div>
+            <h1 class="welcome-title">Contacts</h1>
+            <p class="welcome-subtitle">Manage your email contacts and verification queue.</p>
+          </div>
+        </div>
+
+        <!-- Stats Banner -->
+        <div id="stats-banner" class="stats-banner">
+          <div class="stat-card">
+            <div class="stat-value" id="pending-count">-</div>
+            <div class="stat-label">Pending Verifications</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="verified-count">-</div>
+            <div class="stat-label">Verified Contacts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="total-count">-</div>
+            <div class="stat-label">Total Contacts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <main class="contacts-content">
+        <!-- Status Message -->
+        <div id="status-message" class="hidden"></div>
+
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+          <div class="tabs-header">
+            <button
+              id="tab-verification"
+              class="tab-button active"
+              data-tab="verification"
+            >
+              Verification Queue
+            </button>
+            <button
+              id="tab-contacts"
+              class="tab-button"
+              data-tab="contacts"
+            >
+              All Contacts
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tabs-content">
+            <div id="content-verification" class="tab-panel active">
+              <VerificationQueue client:only="react" />
+            </div>
+            <div id="content-contacts" class="tab-panel">
+              <ContactList userId={auth.userId} client:only="react" />
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script is:inline>
+      // Tab switching logic
+      function initTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+
+        tabButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            const targetTab = button.dataset.tab;
+
+            // Update active states
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanels.forEach(panel => panel.classList.remove('active'));
+
+            button.classList.add('active');
+            document.getElementById(`content-${targetTab}`)?.classList.add('active');
+          });
+        });
+      }
+
+      // Load stats
+      async function loadStats() {
+        try {
+          const [queueResponse, contactsResponse] = await Promise.all([
+            fetch('/api/contacts/verification-queue'),
+            fetch('/api/contacts/list')
+          ]);
+
+          const queueData = await queueResponse.json();
+          const contactsData = await contactsResponse.json();
+
+          if (queueResponse.ok && queueData.contacts) {
+            document.getElementById('pending-count').textContent = queueData.contacts.length;
+          }
+
+          if (contactsResponse.ok && contactsData.contacts) {
+            const verifiedCount = contactsData.contacts.filter(c => c.verificationStatus === 'verified').length;
+            document.getElementById('verified-count').textContent = verifiedCount;
+            document.getElementById('total-count').textContent = contactsData.contacts.length;
+          }
+        } catch (error) {
+          console.error('Error loading stats:', error);
+          document.getElementById('pending-count').textContent = '0';
+          document.getElementById('verified-count').textContent = '0';
+          document.getElementById('total-count').textContent = '0';
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        initTabs();
+        loadStats();
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    background: var(--color-background);
+  }
+
+  .contacts-page {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, var(--color-background) 0%, var(--color-surface) 100%);
+  }
+
+  /* Welcome Section */
+  .welcome-section {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2rem;
+  }
+
+  .welcome-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-light);
+  }
+
+  /* Stats Banner */
+  .stats-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    max-width: 1200px;
+  }
+
+  .stat-card {
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    text-align: center;
+    transition: all var(--transition-base);
+  }
+
+  .stat-card:hover {
+    transform: var(--hover-transform);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    font-weight: 500;
+  }
+
+  /* Main Content */
+  .contacts-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* Status Messages */
+  #status-message {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  #status-message.alert-success {
+    background: var(--color-success-bg);
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+    color: var(--color-success-text);
+  }
+
+  #status-message.alert-error {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+    color: var(--color-error);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* Tabs */
+  .tabs-container {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .tabs-header {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-background);
+  }
+
+  .tab-button {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--color-text-light);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .tab-button:hover {
+    color: var(--color-text);
+    background: var(--color-surface);
+  }
+
+  .tab-button.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background: var(--color-surface);
+  }
+
+  .tabs-content {
+    min-height: 400px;
+  }
+
+  .tab-panel {
+    display: none;
+    padding: 1.5rem;
+  }
+
+  .tab-panel.active {
+    display: block;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .welcome-section {
+      padding: 1.5rem;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+    }
+
+    .welcome-subtitle {
+      font-size: 0.875rem;
+    }
+
+    .stats-banner {
+      grid-template-columns: 1fr;
+    }
+
+    .contacts-content {
+      padding: 1rem;
+    }
+
+    .tabs-header {
+      flex-direction: column;
+    }
+
+    .tab-button {
+      border-bottom: 1px solid var(--color-border);
+      border-left: 3px solid transparent;
+    }
+
+    .tab-button.active {
+      border-left-color: var(--color-primary);
+      border-bottom-color: var(--color-border);
+    }
+
+    .tab-panel {
+      padding: 1rem;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .stats-banner {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

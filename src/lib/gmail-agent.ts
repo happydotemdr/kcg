@@ -5,58 +5,11 @@
 
 import { google } from 'googleapis';
 import type { gmail_v1 } from 'googleapis';
-import {
-  findGmailAccountById,
-  updateGmailAccountTokens,
-  updateLastSyncedAt,
-  isGmailTokenExpired,
-} from './db/repositories/gmail-accounts';
-
-// OAuth2 configuration
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4321/api/auth/gmail/callback';
-
-// Required scopes for Gmail access
-export const GMAIL_SCOPES = [
-  'https://www.googleapis.com/auth/gmail.readonly', // Read emails
-  'https://www.googleapis.com/auth/gmail.compose', // Create drafts
-  'https://www.googleapis.com/auth/gmail.modify', // Modify labels
-  'https://mail.google.com/', // Full access (for send)
-];
-
-/**
- * Create OAuth2 client for Gmail
- */
-export function createGmailOAuth2Client() {
-  return new google.auth.OAuth2(
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    GOOGLE_REDIRECT_URI
-  );
-}
-
-/**
- * Generate authorization URL for Gmail
- */
-export function getGmailAuthorizationUrl(userId: string): string {
-  const oauth2Client = createGmailOAuth2Client();
-  return oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: GMAIL_SCOPES,
-    prompt: 'consent',
-    state: encodeURIComponent(userId), // Pass user ID in state
-  });
-}
-
-/**
- * Exchange authorization code for Gmail tokens
- */
-export async function exchangeGmailCodeForTokens(code: string) {
-  const oauth2Client = createGmailOAuth2Client();
-  const { tokens } = await oauth2Client.getToken(code);
-  return tokens;
-}
+import { findGmailAccountById, updateLastSyncedAt } from './db/repositories/gmail-accounts';
+import { findTokenByUserId, upsertOAuthToken } from './db/repositories/google-oauth';
+import { createOAuth2Client } from './google-calendar';
+import type { GmailAccountType } from './db/types';
+import { inferGoogleAccount } from './account-inference';
 
 /**
  * Get authenticated Gmail client for an account
@@ -68,29 +21,87 @@ async function getAuthenticatedGmailClient(accountId: string) {
     throw new Error('Gmail account not found. Please connect your Gmail account first.');
   }
 
-  const oauth2Client = createGmailOAuth2Client();
+  // Get OAuth tokens from google_oauth_tokens table
+  const tokenData = await findTokenByUserId(account.user_id, account.google_account_email);
+
+  if (!tokenData) {
+    throw new Error('Gmail OAuth tokens not found. Please reconnect your Gmail account.');
+  }
+
+  // Use shared OAuth2 client from google-calendar.ts
+  const oauth2Client = createOAuth2Client();
   oauth2Client.setCredentials({
-    access_token: account.gmail_access_token,
-    refresh_token: account.gmail_refresh_token,
-    token_type: account.gmail_token_type,
-    expiry_date: account.gmail_expiry_date,
+    access_token: tokenData.access_token,
+    refresh_token: tokenData.refresh_token,
+    token_type: tokenData.token_type,
+    expiry_date: tokenData.expiry_date,
   });
 
   // Handle token refresh automatically
   oauth2Client.on('tokens', async (tokens) => {
-    // Update tokens in database when refreshed
+    // Update tokens in google_oauth_tokens table when refreshed
     if (tokens.access_token) {
-      await updateGmailAccountTokens(accountId, {
+      await upsertOAuthToken({
+        user_id: account.user_id,
+        google_account_email: account.google_account_email,
         access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token || account.gmail_refresh_token || undefined,
-        token_type: tokens.token_type || undefined,
-        expiry_date: tokens.expiry_date || undefined,
-        scope: tokens.scope || undefined,
+        refresh_token: tokens.refresh_token || tokenData.refresh_token,
+        token_type: tokens.token_type || 'Bearer',
+        expiry_date: tokens.expiry_date || null,
+        scope: tokens.scope || tokenData.scope,
       });
     }
   });
 
   return oauth2Client;
+}
+
+/**
+ * Retry with exponential backoff for Gmail API rate limiting
+ * Handles 429 (rate limit) and 500+ (server errors)
+ * Max 5 retries with exponential delays: 1s, 2s, 4s, 8s, 16s
+ */
+async function retryWithExponentialBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5
+): Promise<T> {
+  let lastError: Error | unknown;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      // Check if error is retryable
+      const isRateLimitError = error?.code === 429 || error?.status === 429;
+      const isServerError = error?.code >= 500 || error?.status >= 500;
+
+      if (!isRateLimitError && !isServerError) {
+        // Not a retryable error, throw immediately
+        throw error;
+      }
+
+      // Don't retry on last attempt
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+
+      // Calculate exponential backoff delay: 2^attempt seconds
+      const delaySeconds = Math.pow(2, attempt);
+      const delayMs = delaySeconds * 1000;
+
+      console.log(
+        `[GmailAgent] Rate limit/server error (${error?.code || error?.status}), ` +
+        `retrying in ${delaySeconds}s (attempt ${attempt + 1}/${maxRetries})...`
+      );
+
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  // All retries exhausted
+  throw lastError;
 }
 
 /**
@@ -135,6 +146,60 @@ export interface FetchEmailsParams {
  * Gmail Agent Class
  */
 export class GmailAgent {
+  /**
+   * Infer which Gmail account to use based on context
+   * Returns accountId to use for operations
+   */
+  async inferAccount(
+    clerkUserId: string,
+    context: {
+      subject?: string;
+      from?: string;
+      to?: string[];
+      body?: string;
+    }
+  ): Promise<{ accountId: string; confidence: number; reasoning?: string } | null> {
+    try {
+      const inference = await inferGoogleAccount(clerkUserId, {
+        emailDetails: {
+          subject: context.subject,
+          from: context.from,
+          to: context.to,
+        },
+        userMessage: context.body,
+      });
+
+      // Use suggested account if confidence is high enough
+      if (inference.confidence > 0.7 && inference.suggestedEmail) {
+        // Find the Gmail account ID for this email
+        const { findGmailAccountsByUserId } = await import('./db/repositories/gmail-accounts');
+        const accounts = await findGmailAccountsByUserId(clerkUserId);
+        const matchingAccount = accounts.find(
+          (acc) => acc.google_account_email === inference.suggestedEmail
+        );
+
+        if (matchingAccount) {
+          console.log(
+            `[GmailAgent] Using inferred account: ${inference.suggestedEmail} (confidence: ${inference.confidence})`
+          );
+          console.log(`[GmailAgent] Reasoning: ${inference.reasoning}`);
+          return {
+            accountId: matchingAccount.id,
+            confidence: inference.confidence,
+            reasoning: inference.reasoning,
+          };
+        }
+      }
+
+      // Fallback to primary or first account
+      console.log(`[GmailAgent] Using default account (${inference.reasoning})`);
+      return null;
+    } catch (error) {
+      console.error('[GmailAgent] Error during account inference:', error);
+      return null;
+    }
+  }
+
   /**
    * Fetch emails with efficient batching (metadata only initially)
    */
@@ -205,12 +270,15 @@ export class GmailAgent {
     // Process each batch
     for (const batch of batches) {
       const batchPromises = batch.map(id =>
-        gmail.users.messages.get({
-          userId: 'me',
-          id,
-          format: 'metadata', // Crucial: metadata only for cost optimization
-          metadataHeaders: ['From', 'To', 'Cc', 'Subject', 'Date'], // Only fetch needed headers
-        })
+        retryWithExponentialBackoff(() =>
+          gmail.users.messages.get({
+            userId: 'me',
+            id,
+            format: 'metadata', // Crucial: metadata only for cost optimization
+            metadataHeaders: ['From', 'To', 'Cc', 'Subject', 'Date'], // Only fetch needed headers
+            fields: 'id,threadId,labelIds,snippet,payload/headers', // Reduce bandwidth by 75%
+          })
+        )
       );
 
       const responses = await Promise.all(batchPromises);
@@ -411,7 +479,12 @@ export class GmailAgent {
     try {
       const account = await findGmailAccountById(accountId);
       if (!account) return false;
-      if (isGmailTokenExpired(account)) return false;
+
+      // Check if tokens exist in google_oauth_tokens
+      const tokenData = await findTokenByUserId(account.user_id, account.google_account_email);
+      if (!tokenData) return false;
+
+      // Token expiry checking is handled by DB function is_gmail_token_expired()
       return true;
     } catch {
       return false;

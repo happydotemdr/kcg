@@ -223,6 +223,11 @@ Visit:
 - Dashboard: http://localhost:4321/dashboard (requires authentication)
 - Claude Chat: http://localhost:4321/chat (requires authentication)
 
+### WSL2 Development Notes
+- **Screenshots Location**: Windows Snipping Tool saves to `C:\Users\BKing\screenshots`
+  - Accessible from WSL2 at: `/mnt/c/Users/BKing/screenshots`
+  - Use for accessing screenshots in development workflow
+
 ### Building
 ```bash
 npm run build

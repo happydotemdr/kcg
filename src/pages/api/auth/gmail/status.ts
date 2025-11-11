@@ -4,7 +4,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { findGmailAccountsByUserId, isGmailTokenExpired } from '../../../../lib/db/repositories/gmail-accounts';
+import { findGmailAccountsByUserId } from '../../../../lib/db/repositories/gmail-accounts';
+import { findTokenByUserId } from '../../../../lib/db/repositories/google-oauth';
 
 export const prerender = false;
 
@@ -35,14 +36,22 @@ export const GET: APIRoute = async ({ locals }) => {
     }
 
     // Check token expiration for each account
-    const accountsWithStatus = accounts.map(account => ({
-      id: account.id,
-      email: account.email,
-      accountType: account.account_type,
-      connected: !isGmailTokenExpired(account),
-      lastSynced: account.last_synced_at,
-      syncSettings: account.sync_settings,
-    }));
+    const accountsWithStatus = await Promise.all(
+      accounts.map(async (account) => {
+        // Check if tokens exist in google_oauth_tokens
+        const token = await findTokenByUserId(account.user_id, account.google_account_email);
+        const connected = !!token; // Token existence check (expiry handled by DB function)
+
+        return {
+          id: account.id,
+          email: account.email,
+          accountType: account.account_type,
+          connected,
+          lastSynced: account.last_synced_at,
+          syncSettings: account.sync_settings,
+        };
+      })
+    );
 
     const allConnected = accountsWithStatus.every(a => a.connected);
 

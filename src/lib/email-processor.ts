@@ -11,6 +11,11 @@ import {
 } from './db/repositories/email-metadata';
 import { createProcessingLog } from './db/repositories/email-processing-log';
 import type { EmailImportance, ExtractedActions } from './db/types';
+import { classifyContact, checkAndAutoVerify } from './email-contact-processor';
+import { extractContactFromSignature, extractDomain } from './email-contact-extractor';
+import * as emailContactsRepo from './db/repositories/email-contacts';
+import * as contactAssocRepo from './db/repositories/email-contact-associations';
+import { findGmailAccountById } from './db/repositories/gmail-accounts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -306,7 +311,14 @@ Respond with a JSON array of classifications, one per email (same order):
 
       const content = message.content[0];
       if (content.type === 'text') {
-        const classifications = JSON.parse(content.text);
+        // Strip markdown code blocks if present (```json ... ```)
+        let jsonText = content.text.trim();
+        const codeBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (codeBlockMatch) {
+          jsonText = codeBlockMatch[1].trim();
+        }
+
+        const classifications = JSON.parse(jsonText);
         const result = new Map<string, EmailClassification>();
 
         classifications.forEach((cls: any) => {
@@ -356,7 +368,7 @@ Respond with a JSON array of classifications, one per email (same order):
     classification: EmailClassification
   ): Promise<void> {
     try {
-      await upsertEmailMetadata({
+      const storedEmail = await upsertEmailMetadata({
         account_id: accountId,
         gmail_message_id: email.id,
         gmail_thread_id: email.threadId,
@@ -381,9 +393,85 @@ Respond with a JSON array of classifications, one per email (same order):
         last_analyzed_at: new Date(),
         calendar_events_created: [],
       });
+
+      // Extract and classify sender contact (non-blocking)
+      await this.extractContactFromEmail(accountId, storedEmail.id, email);
     } catch (error) {
       console.error('[EmailProcessor] Error storing metadata:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Extract contact from email and create association
+   */
+  private async extractContactFromEmail(
+    accountId: string,
+    emailMetadataId: string,
+    email: ProcessedEmail
+  ): Promise<void> {
+    try {
+      // Check if this email already has contact associations (avoid reprocessing)
+      const existingAssociations = await contactAssocRepo.findByEmailId(emailMetadataId);
+      if (existingAssociations.length > 0) {
+        // Already processed this email's contacts
+        return;
+      }
+
+      // Get user ID from account
+      const account = await findGmailAccountById(accountId);
+      if (!account) {
+        console.warn(`[EmailProcessor] Account ${accountId} not found for contact extraction`);
+        return;
+      }
+
+      const userId = account.user_id;
+
+      // Extract sender name from "Name <email>" format
+      const fromMatch = email.from.match(/^(.+?)\s*<(.+)>$/);
+      const fromEmail = fromMatch ? fromMatch[2].trim() : email.from.trim();
+      const fromName = fromMatch ? fromMatch[1].trim() : null;
+
+      // Classify contact using AI
+      const classification = await classifyContact(email.snippet, fromEmail, email.subject);
+
+      // Extract additional info from signature
+      const signatureInfo = extractContactFromSignature(email.snippet);
+      const domain = extractDomain(fromEmail);
+
+      // Upsert contact (increment count if exists)
+      const contact = await emailContactsRepo.upsertContact(userId, fromEmail, {
+        display_name: fromName || null,
+        organization: signatureInfo.organization,
+        domain,
+        phone_numbers: signatureInfo.phones,
+        source_type: classification.sourceType,
+        tags: classification.tags,
+        confidence_score: classification.confidenceScore,
+        extraction_metadata: {
+          reasoning: classification.reasoning,
+          last_extracted: new Date()
+        },
+        first_seen: new Date(),
+        last_seen: new Date(),
+      });
+
+      // Check and auto-verify contact
+      const verificationResult = await checkAndAutoVerify(userId, contact.id, contact);
+      console.log(`Contact ${contact.email} verification:`, verificationResult);
+
+      // Create association between email and contact
+      await contactAssocRepo.createAssociation({
+        email_metadata_id: emailMetadataId,
+        contact_id: contact.id,
+        role: 'sender',
+        extraction_confidence: classification.confidenceScore,
+      });
+
+      console.log(`[EmailProcessor] Contact extracted: ${fromEmail} (confidence: ${classification.confidenceScore})`);
+    } catch (error) {
+      // Non-blocking: log error but don't break email processing
+      console.error('[EmailProcessor] Contact extraction failed:', error);
     }
   }
 

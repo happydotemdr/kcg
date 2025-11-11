@@ -159,7 +159,7 @@ async function getCalendarAgentStatus(userId: string): Promise<AgentStatus> {
         prompt: "I've uploaded '{filename}'. Please analyze this document and extract any calendar events, including dates, times, locations, and descriptions. Check for duplicates and add the events to my calendar.",
         acceptedTypes: ['image/*', 'application/pdf'],
       },
-      settingsUrl: '/calendar-config',
+      settingsUrl: '/integrations',
       recentActivity,
     };
   } catch (error) {
@@ -176,7 +176,7 @@ async function getCalendarAgentStatus(userId: string): Promise<AgentStatus> {
         prompt: "I've uploaded '{filename}'. Please analyze this document and extract any calendar events, including dates, times, locations, and descriptions. Check for duplicates and add the events to my calendar.",
         acceptedTypes: ['image/*', 'application/pdf'],
       },
-      settingsUrl: '/calendar-config',
+      settingsUrl: '/integrations',
       recentActivity: null,
     };
   }
@@ -187,45 +187,46 @@ async function getCalendarAgentStatus(userId: string): Promise<AgentStatus> {
  */
 async function getGmailAgentStatus(clerkUserId: string): Promise<AgentStatus> {
   try {
-    // Check if user has Gmail OAuth tokens
+    // Get user UUID from Clerk ID
+    const dbUser = await findUserByClerkId(clerkUserId);
+    if (!dbUser) {
+      return createGmailAgentStatus('not-configured');
+    }
+
+    // Check if user has Google OAuth tokens (shared for Gmail and Calendar)
     const tokenResult = await query(
-      'SELECT gmail_access_token FROM gmail_accounts WHERE user_id = $1 LIMIT 1',
-      [clerkUserId]
+      'SELECT access_token FROM google_oauth_tokens WHERE user_id = $1 LIMIT 1',
+      [dbUser.id]
     );
 
-    const hasTokens = tokenResult.rows.length > 0 && tokenResult.rows[0].gmail_access_token;
+    const hasTokens = tokenResult.rows.length > 0 && tokenResult.rows[0].access_token;
 
-    return {
-      id: 'gmail',
-      name: 'Gmail Agent',
-      icon: '📧',
-      status: hasTokens ? 'connected' : 'not-configured',
-      capabilities: ['Multi-Account', 'Search', 'Classification'],
-      description: 'Analyze and manage emails across multiple accounts',
-      uploadAction: {
-        label: 'Analyze Email',
-        prompt: "Please analyze this email screenshot and extract key information including sender, subject, important dates, actions required, and classify its priority. Let me know if I need to take any action.",
-        acceptedTypes: ['image/*'],
-      },
-      settingsUrl: '/gmail-config',
-      recentActivity: null,
-    };
+    return createGmailAgentStatus(hasTokens ? 'connected' : 'not-configured');
   } catch (error) {
     console.error('Error fetching Gmail agent status:', error);
-    return {
-      id: 'gmail',
-      name: 'Gmail Agent',
-      icon: '📧',
-      status: 'error',
-      capabilities: ['Multi-Account', 'Search', 'Classification'],
-      description: 'Analyze and manage emails across multiple accounts',
-      uploadAction: {
-        label: 'Analyze Email',
-        prompt: "Please analyze this email screenshot and extract key information including sender, subject, important dates, actions required, and classify its priority. Let me know if I need to take any action.",
-        acceptedTypes: ['image/*'],
-      },
-      settingsUrl: '/gmail-config',
-      recentActivity: null,
-    };
+    return createGmailAgentStatus('error');
   }
+}
+
+/**
+ * Helper to create Gmail Agent status object
+ */
+function createGmailAgentStatus(
+  status: 'connected' | 'needs-refresh' | 'error' | 'not-configured'
+): AgentStatus {
+  return {
+    id: 'gmail',
+    name: 'Gmail Agent',
+    icon: '📧',
+    status,
+    capabilities: ['Multi-Account', 'Search', 'Classification'],
+    description: 'Analyze and manage emails across multiple accounts',
+    uploadAction: {
+      label: 'Analyze Email',
+      prompt: "Please analyze this email screenshot and extract key information including sender, subject, important dates, actions required, and classify its priority. Let me know if I need to take any action.",
+      acceptedTypes: ['image/*'],
+    },
+    settingsUrl: '/integrations',
+    recentActivity: null,
+  };
 }

@@ -1,0 +1,124 @@
+---
+/**
+ * Integrations Page
+ * Manage Google and Microsoft account connections
+ */
+
+import AppHeader from '@components/AppHeader';
+import IntegrationsManager from '@components/integrations/IntegrationsManager';
+import { initializeDatabase } from '../lib/db';
+import { findUserByClerkId } from '../lib/db/repositories/users';
+
+// Initialize database
+initializeDatabase();
+
+// Check if user is authenticated
+const auth = Astro.locals.auth();
+if (!auth?.userId) {
+  return Astro.redirect('/sign-in');
+}
+
+// Get database user
+const dbUser = await findUserByClerkId(auth.userId);
+if (!dbUser) {
+  return new Response('User not found', { status: 404 });
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Integrations - Keep Choosing Good</title>
+    <meta name="description" content="Manage your Google and Microsoft account connections" />
+
+    <!-- Design Tokens -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+  </head>
+  <body>
+    <div class="integrations-page">
+      <!-- Unified Header -->
+      <AppHeader currentPage="other" client:only="react" />
+
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <h1 class="welcome-title">Integrations</h1>
+        <p class="welcome-subtitle">Manage your Google and Microsoft account connections</p>
+      </div>
+
+      <!-- Main Content -->
+      <main class="integrations-content">
+        <IntegrationsManager client:only="react" />
+      </main>
+    </div>
+  </body>
+</html>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    background: var(--color-background);
+  }
+
+  .integrations-page {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, var(--color-background) 0%, var(--color-surface) 100%);
+  }
+
+  /* Welcome Section */
+  .welcome-section {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2rem;
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-light);
+  }
+
+  /* Main Content */
+  .integrations-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .text-muted {
+    color: var(--color-text-light);
+    font-size: 0.875rem;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .welcome-section {
+      padding: 1.5rem;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+    }
+
+    .welcome-subtitle {
+      font-size: 0.875rem;
+    }
+
+    .integrations-content {
+      padding: 1rem;
+    }
+  }
+</style>

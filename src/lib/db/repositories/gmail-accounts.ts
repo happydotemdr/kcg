@@ -1,9 +1,13 @@
 /**
  * Gmail Accounts Repository
  * Database operations for gmail_accounts table
+ *
+ * NOTE: All functions accept Clerk userId (string) and convert to UUID internally.
+ * Database schema uses UUID FK to users.id (not TEXT clerk_user_id).
  */
 
 import { query, transaction } from '../client';
+import { findUserByClerkId } from './users';
 import type { GmailAccount, CreateGmailAccount, GmailAccountType } from '../types';
 import type { PoolClient } from 'pg';
 
@@ -31,34 +35,55 @@ export async function findGmailAccountByEmail(email: string): Promise<GmailAccou
 
 /**
  * Find all Gmail accounts for a user
+ * @param clerkUserId - Clerk user ID (converted to UUID internally)
  */
-export async function findGmailAccountsByUserId(userId: string): Promise<GmailAccount[]> {
+export async function findGmailAccountsByUserId(clerkUserId: string): Promise<GmailAccount[]> {
+  // Convert Clerk ID to UUID
+  const user = await findUserByClerkId(clerkUserId);
+  if (!user) {
+    throw new Error(`User not found for Clerk ID: ${clerkUserId}`);
+  }
+
   const result = await query<GmailAccount>(
     'SELECT * FROM gmail_accounts WHERE user_id = $1 ORDER BY created_at DESC',
-    [userId]
+    [user.id]
   );
   return result.rows;
 }
 
 /**
  * Find Gmail account by user ID and account type
+ * @param clerkUserId - Clerk user ID (converted to UUID internally)
  */
 export async function findGmailAccountByUserIdAndType(
-  userId: string,
+  clerkUserId: string,
   accountType: GmailAccountType
 ): Promise<GmailAccount | null> {
+  // Convert Clerk ID to UUID
+  const user = await findUserByClerkId(clerkUserId);
+  if (!user) {
+    throw new Error(`User not found for Clerk ID: ${clerkUserId}`);
+  }
+
   const result = await query<GmailAccount>(
     'SELECT * FROM gmail_accounts WHERE user_id = $1 AND account_type = $2',
-    [userId, accountType]
+    [user.id, accountType]
   );
   return result.rows[0] || null;
 }
 
 /**
  * Create or update Gmail account (upsert)
+ * @param accountData.user_id - Should be Clerk user ID (converted to UUID internally)
  */
 export async function upsertGmailAccount(accountData: CreateGmailAccount): Promise<GmailAccount> {
   return await transaction(async (client: PoolClient) => {
+    // Convert Clerk ID to UUID
+    const user = await findUserByClerkId(accountData.user_id);
+    if (!user) {
+      throw new Error(`User not found for Clerk ID: ${accountData.user_id}`);
+    }
+
     // Check if account exists by email
     const existing = await findGmailAccountByEmail(accountData.email);
 
@@ -66,22 +91,14 @@ export async function upsertGmailAccount(accountData: CreateGmailAccount): Promi
       // Update existing account
       const result = await client.query<GmailAccount>(
         `UPDATE gmail_accounts SET
-          gmail_access_token = $1,
-          gmail_refresh_token = $2,
-          gmail_token_type = $3,
-          gmail_expiry_date = $4,
-          gmail_scope = $5,
-          sync_settings = $6,
-          account_type = $7,
+          google_account_email = $1,
+          sync_settings = $2,
+          account_type = $3,
           updated_at = CURRENT_TIMESTAMP
-        WHERE email = $8
+        WHERE email = $4
         RETURNING *`,
         [
-          accountData.gmail_access_token,
-          accountData.gmail_refresh_token || null,
-          accountData.gmail_token_type || 'Bearer',
-          accountData.gmail_expiry_date || null,
-          accountData.gmail_scope || null,
+          accountData.google_account_email,
           JSON.stringify(accountData.sync_settings),
           accountData.account_type,
           accountData.email,
@@ -89,69 +106,23 @@ export async function upsertGmailAccount(accountData: CreateGmailAccount): Promi
       );
       return result.rows[0];
     } else {
-      // Create new account
+      // Create new account with UUID user_id
       const result = await client.query<GmailAccount>(
         `INSERT INTO gmail_accounts (
-          user_id, email, account_type,
-          gmail_access_token, gmail_refresh_token, gmail_token_type,
-          gmail_expiry_date, gmail_scope, sync_settings
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          user_id, email, account_type, google_account_email, sync_settings
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING *`,
         [
-          accountData.user_id,
+          user.id, // Use UUID, not Clerk ID
           accountData.email,
           accountData.account_type,
-          accountData.gmail_access_token,
-          accountData.gmail_refresh_token || null,
-          accountData.gmail_token_type || 'Bearer',
-          accountData.gmail_expiry_date || null,
-          accountData.gmail_scope || null,
+          accountData.google_account_email,
           JSON.stringify(accountData.sync_settings),
         ]
       );
       return result.rows[0];
     }
   });
-}
-
-/**
- * Update Gmail account tokens (for OAuth refresh)
- */
-export async function updateGmailAccountTokens(
-  accountId: string,
-  tokens: {
-    access_token: string;
-    refresh_token?: string;
-    token_type?: string;
-    expiry_date?: number;
-    scope?: string;
-  }
-): Promise<GmailAccount> {
-  const result = await query<GmailAccount>(
-    `UPDATE gmail_accounts SET
-      gmail_access_token = $1,
-      gmail_refresh_token = COALESCE($2, gmail_refresh_token),
-      gmail_token_type = COALESCE($3, gmail_token_type),
-      gmail_expiry_date = COALESCE($4, gmail_expiry_date),
-      gmail_scope = COALESCE($5, gmail_scope),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $6
-    RETURNING *`,
-    [
-      tokens.access_token,
-      tokens.refresh_token || null,
-      tokens.token_type || null,
-      tokens.expiry_date || null,
-      tokens.scope || null,
-      accountId,
-    ]
-  );
-
-  if (result.rows.length === 0) {
-    throw new Error(`Gmail account ${accountId} not found`);
-  }
-
-  return result.rows[0];
 }
 
 /**
@@ -188,6 +159,29 @@ export async function updateSyncSettings(
 }
 
 /**
+ * Update account type
+ */
+export async function updateGmailAccountType(
+  accountId: string,
+  accountType: GmailAccountType
+): Promise<GmailAccount> {
+  const result = await query<GmailAccount>(
+    `UPDATE gmail_accounts SET
+      account_type = $1,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
+    RETURNING *`,
+    [accountType, accountId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error(`Gmail account ${accountId} not found`);
+  }
+
+  return result.rows[0];
+}
+
+/**
  * Delete Gmail account
  */
 export async function deleteGmailAccount(accountId: string): Promise<boolean> {
@@ -200,24 +194,23 @@ export async function deleteGmailAccount(accountId: string): Promise<boolean> {
 
 /**
  * Delete Gmail account by user ID and email
+ * @param clerkUserId - Clerk user ID (converted to UUID internally)
  */
 export async function deleteGmailAccountByUserIdAndEmail(
-  userId: string,
+  clerkUserId: string,
   email: string
 ): Promise<boolean> {
+  // Convert Clerk ID to UUID
+  const user = await findUserByClerkId(clerkUserId);
+  if (!user) {
+    throw new Error(`User not found for Clerk ID: ${clerkUserId}`);
+  }
+
   const result = await query(
     'DELETE FROM gmail_accounts WHERE user_id = $1 AND email = $2',
-    [userId, email]
+    [user.id, email]
   );
   return result.rowCount !== null && result.rowCount > 0;
-}
-
-/**
- * Check if Gmail token is expired
- */
-export function isGmailTokenExpired(account: GmailAccount): boolean {
-  if (!account.gmail_expiry_date) return false;
-  return Date.now() >= account.gmail_expiry_date;
 }
 
 /**
@@ -226,17 +219,24 @@ export function isGmailTokenExpired(account: GmailAccount): boolean {
 export async function getValidGmailAccount(accountId: string): Promise<GmailAccount | null> {
   const account = await findGmailAccountById(accountId);
   if (!account) return null;
-  if (isGmailTokenExpired(account)) return null;
+  // Token expiry checking is now handled by the DB function is_gmail_token_expired()
   return account;
 }
 
 /**
  * Count Gmail accounts for a user
+ * @param clerkUserId - Clerk user ID (converted to UUID internally)
  */
-export async function countGmailAccountsByUserId(userId: string): Promise<number> {
+export async function countGmailAccountsByUserId(clerkUserId: string): Promise<number> {
+  // Convert Clerk ID to UUID
+  const user = await findUserByClerkId(clerkUserId);
+  if (!user) {
+    throw new Error(`User not found for Clerk ID: ${clerkUserId}`);
+  }
+
   const result = await query<{ count: string }>(
     'SELECT COUNT(*) as count FROM gmail_accounts WHERE user_id = $1',
-    [userId]
+    [user.id]
   );
   return parseInt(result.rows[0].count, 10);
 }

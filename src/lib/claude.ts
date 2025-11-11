@@ -216,7 +216,7 @@ export async function buildEnhancedSystemPrompt(
       }
     } else {
       enhancedPrompt += `\n\n## User's Calendar Configuration\n`;
-      enhancedPrompt += `The user has not configured any calendar mappings yet. They need to connect their Google Calendar and set up calendar mappings at /calendar-config before using calendar features.`;
+      enhancedPrompt += `The user has not configured any calendar mappings yet. They need to connect their Google Calendar and set up calendar mappings at /integrations before using calendar features.`;
     }
   } catch (error) {
     console.error('[buildEnhancedSystemPrompt] Error fetching calendar mappings:', error);
@@ -392,6 +392,79 @@ export const CALENDAR_TOOLS: Tool[] = [
 
 // Legacy export for backwards compatibility
 export const CALENDAR_TOOL = GET_CALENDAR_EVENTS_TOOL;
+
+/**
+ * Contact extraction tool for Gmail integration
+ * Extracts structured contact information from email content
+ */
+export const EXTRACT_CONTACTS_TOOL: Tool = {
+  name: 'extract_email_contacts',
+  description: 'Extract structured contact information from email content (plain text). Identify people, their roles, organizations, and contact details.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      contacts: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            email: { type: 'string', description: 'Email address' },
+            display_name: { type: 'string', description: 'Person or organization name' },
+            organization: { type: 'string', description: 'Company, school, team name' },
+            phone_numbers: { type: 'array', items: { type: 'string' } },
+            source_type: {
+              type: 'string',
+              enum: ['coach', 'teacher', 'school_admin', 'team', 'club', 'therapist', 'medical', 'vendor', 'other'],
+              description: 'Category of contact',
+            },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Keywords like sport name, subject, activity' },
+            confidence_score: { type: 'number', minimum: 0, maximum: 1, description: 'How confident in classification' },
+            reasoning: { type: 'string', description: 'Why this classification' },
+          },
+          required: ['email', 'source_type', 'confidence_score'],
+        },
+      },
+    },
+  },
+} as const satisfies Tool;
+
+/**
+ * Contact search tool for querying stored contacts
+ * Enables natural language contact discovery
+ */
+export const SEARCH_CONTACTS_TOOL = {
+  name: 'search_contacts',
+  description: 'Search all contacts by name, email, organization, or tags. Use natural language queries like "Find Jake\'s soccer coach"',
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Search query (name, email, organization)' },
+      source_type: { type: 'string', enum: ['all', 'coach', 'teacher', 'school_admin', 'team', 'club', 'therapist', 'medical', 'vendor'] },
+      verification_status: { type: 'string', enum: ['all', 'verified', 'pending', 'unverified'] }
+    },
+    required: ['query']
+  }
+} as const satisfies Anthropic.Tool;
+
+/**
+ * Get verified sources tool
+ * Retrieve trusted contacts (coaches, teachers, therapists, etc.) confirmed by user
+ */
+export const GET_VERIFIED_SOURCES_TOOL = {
+  name: 'get_verified_sources',
+  description: 'Retrieve verified contacts/sources (coaches, teachers, therapists, schools, etc.) that the user has confirmed as trusted',
+  input_schema: {
+    type: 'object',
+    properties: {
+      source_type: {
+        type: 'string',
+        enum: ['all', 'coach', 'teacher', 'school_admin', 'team', 'club', 'therapist', 'medical', 'vendor'],
+        description: 'Filter by contact type'
+      },
+      tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags (e.g., "soccer", "piano")' }
+    }
+  }
+} as const satisfies Anthropic.Tool;
 
 /**
  * Convert our Message format to Anthropic's format
