@@ -8,7 +8,7 @@ import React from 'react';
 import { UserButton } from '@clerk/astro/react';
 
 interface AppHeaderProps {
-  currentPage?: 'dashboard' | 'chat' | 'calendar' | 'other';
+  currentPage?: 'dashboard' | 'chat' | 'calendar' | 'usage' | 'other';
 }
 
 export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
@@ -16,6 +16,7 @@ export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
     { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
     { href: '/chat', label: 'Claude Chat', key: 'chat' },
     { href: '/calendar-config', label: 'Calendar', key: 'calendar' },
+    { href: '/usage', label: 'Usage', key: 'usage' },
   ];
 
   return (

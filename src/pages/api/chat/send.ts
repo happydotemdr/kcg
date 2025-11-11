@@ -6,7 +6,7 @@
 
 import type { APIRoute } from 'astro';
 import { v4 as uuidv4 } from 'uuid';
-import { streamChatCompletionWithTools, buildEnhancedSystemPrompt } from '../../../lib/claude';
+import { streamChatCompletionWithTools, buildEnhancedSystemPrompt, type UsageData, type ToolExecutionResult } from '../../../lib/claude';
 import {
   createConversation,
   getConversation,
@@ -14,6 +14,7 @@ import {
 } from '../../../lib/storage';
 import type { Message, ChatRequest } from '../../../types/chat';
 import { findUserByClerkId } from '../../../lib/db/repositories/users';
+import { trackApiCall, trackToolExecution } from '../../../lib/claude-usage-tracker.js';
 
 export const prerender = false;
 
@@ -109,6 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       async start(controller) {
         let fullResponse = '';
         let hasError = false;
+        let currentApiCallId: string | undefined;
 
         // Helper function to safely enqueue data
         const safeEnqueue = (data: string): boolean => {
@@ -257,7 +259,95 @@ export const POST: APIRoute = async ({ request, locals }) => {
               safeClose();
             },
             conversation.model,
-            conversation.systemPrompt
+            conversation.systemPrompt,
+            // NEW: Usage data callback
+            async (usageData: UsageData) => {
+              if (hasError) return;
+
+              const USAGE_TRACKING_DEBUG = process.env.USAGE_TRACKING_DEBUG === 'true';
+
+              try {
+                // Track the API call with full usage metadata
+                currentApiCallId = await trackApiCall(
+                  dbUser.id,
+                  conversation?.id,
+                  conversation?.title,
+                  {
+                    id: usageData.message_id,
+                    model: usageData.model,
+                    stop_reason: usageData.stop_reason,
+                    usage: usageData.usage
+                  },
+                  {
+                    request_id: usageData.request_id,
+                    tool_calls_count: usageData.tool_calls_count,
+                    response_time_ms: usageData.response_time_ms
+                  }
+                );
+
+                if (USAGE_TRACKING_DEBUG) {
+                  console.log('[Usage Debug] Tracked API call:', {
+                    apiCallId: currentApiCallId,
+                    userId: dbUser.id,
+                    model: usageData.model,
+                    totalTokens: usageData.usage.input_tokens + usageData.usage.output_tokens,
+                    responseTimeMs: usageData.response_time_ms,
+                    toolCallsCount: usageData.tool_calls_count
+                  });
+                }
+
+                console.log(`[Usage] Tracked API call: ${currentApiCallId}`);
+              } catch (error) {
+                console.error('[Usage Tracking Error]', {
+                  operation: 'trackApiCall',
+                  userId: dbUser.id,
+                  conversationId: conversation?.id,
+                  error: error instanceof Error ? error.message : String(error)
+                });
+                // Don't fail the main request if tracking fails
+              }
+            },
+            // NEW: Tool completion callback
+            async (toolName: string, toolInput: any, executionResult: ToolExecutionResult) => {
+              if (hasError) return;
+
+              const USAGE_TRACKING_DEBUG = process.env.USAGE_TRACKING_DEBUG === 'true';
+
+              if (currentApiCallId) {
+                try {
+                  await trackToolExecution(
+                    currentApiCallId,
+                    dbUser.id,
+                    toolName,
+                    toolInput,
+                    {
+                      success: executionResult.success,
+                      execution_time_ms: executionResult.execution_time_ms,
+                      output_summary: executionResult.result?.substring(0, 500), // Truncate for storage
+                      error_message: executionResult.error
+                    }
+                  );
+
+                  if (USAGE_TRACKING_DEBUG) {
+                    console.log('[Usage Debug] Tracked tool execution:', {
+                      toolName,
+                      executionTimeMs: executionResult.execution_time_ms,
+                      success: executionResult.success
+                    });
+                  }
+
+                  console.log(`[Usage] Tracked tool execution: ${toolName} (${executionResult.execution_time_ms}ms)`);
+                } catch (error) {
+                  console.error('[Usage Tracking Error]', {
+                    operation: 'trackToolExecution',
+                    toolName,
+                    userId: dbUser.id,
+                    error: error instanceof Error ? error.message : String(error)
+                  });
+                  // Don't fail the main request if tracking fails
+                }
+              }
+            }
           );
         } catch (error) {
           hasError = true;
