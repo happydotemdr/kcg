@@ -101,17 +101,8 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export default function TokenBreakdownChart({ data, groupBy }: TokenBreakdownChartProps) {
-  // Transform data for chart
-  const chartData: ChartDataPoint[] = data.map(item => ({
-    date: formatDate(item.period, groupBy),
-    input_tokens: item.input_tokens,
-    output_tokens: item.output_tokens,
-    cache_read_tokens: item.cache_read_tokens,
-    cache_creation_tokens: item.cache_creation_tokens,
-  }));
-
-  // Empty state
-  if (data.length === 0) {
+  // Empty state - check before transforming data
+  if (!data || data.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -139,6 +130,15 @@ export default function TokenBreakdownChart({ data, groupBy }: TokenBreakdownCha
       </div>
     );
   }
+
+  // Transform data for chart
+  const chartData: ChartDataPoint[] = data.map(item => ({
+    date: formatDate(item.period, groupBy),
+    input_tokens: item.input_tokens,
+    output_tokens: item.output_tokens,
+    cache_read_tokens: item.cache_read_tokens,
+    cache_creation_tokens: item.cache_creation_tokens,
+  }));
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

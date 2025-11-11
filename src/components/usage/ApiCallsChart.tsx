@@ -93,15 +93,8 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export default function ApiCallsChart({ data, groupBy }: ApiCallsChartProps) {
-  // Transform data for chart
-  const chartData: ChartDataPoint[] = data.map(item => ({
-    date: formatDate(item.period, groupBy),
-    api_calls: item.api_calls,
-    cost: item.cost,
-  }));
-
-  // Empty state
-  if (data.length === 0) {
+  // Empty state - check before transforming data
+  if (!data || data.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -129,6 +122,13 @@ export default function ApiCallsChart({ data, groupBy }: ApiCallsChartProps) {
       </div>
     );
   }
+
+  // Transform data for chart
+  const chartData: ChartDataPoint[] = data.map(item => ({
+    date: formatDate(item.period, groupBy),
+    api_calls: item.api_calls,
+    cost: item.cost,
+  }));
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
