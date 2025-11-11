@@ -3,7 +3,7 @@
  * Orchestrates the dashboard state and tab navigation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UsageDashboardLayout from './UsageDashboardLayout';
 import { getDefaultStartDate, getDefaultEndDate, type DateRange } from '../../lib/usage-date-utils';
 import { useUsageSummary, useConversations, useToolsBreakdown, useModelsBreakdown } from '../../hooks/useUsageData';
@@ -11,6 +11,7 @@ import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import SummaryCards from './SummaryCards';
 import ConversationList from './ConversationList';
+import ConversationDetails from './ConversationDetails';
 
 export default function UsageDashboard() {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -29,6 +30,7 @@ export default function UsageDashboard() {
   const [conversationsSearchQuery, setConversationsSearchQuery] = useState('');
   const [conversationsIncludeDeleted, setConversationsIncludeDeleted] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch data with hooks (only fetch for active tab)
   const summaryData = useUsageSummary({
@@ -60,6 +62,24 @@ export default function UsageDashboard() {
     endDate: dateRange.end,
     enabled: activeTab === 'models'
   });
+
+  // ============================================================================
+  // Modal State Management & Scroll Lock
+  // ============================================================================
+
+  // Scroll lock: Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
 
   // ============================================================================
   // Conversation List Handlers
@@ -94,8 +114,13 @@ export default function UsageDashboard() {
 
   const handleConversationClick = (conversationId: string) => {
     setSelectedConversationId(conversationId);
-    // TODO: Open conversation details modal
-    console.log('Conversation clicked:', conversationId);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    // Optional: Clear selected conversation after animation
+    setTimeout(() => setSelectedConversationId(null), 300);
   };
 
   const handleConversationExport = async (format: 'csv' | 'json') => {
@@ -276,6 +301,13 @@ export default function UsageDashboard() {
           )}
         </div>
       )}
+
+      {/* Conversation Details Modal */}
+      <ConversationDetails
+        isOpen={isModalOpen}
+        conversationId={selectedConversationId}
+        onClose={handleModalClose}
+      />
     </UsageDashboardLayout>
   );
 }

@@ -21,7 +21,10 @@ import type {
   UsageSummaryResult,
   ConversationCostResult,
   ToolUsageBreakdown,
-  ModelUsageBreakdown
+  ModelUsageBreakdown,
+  ConversationDetailsResult,
+  MessageBreakdown,
+  ToolExecutionDetail
 } from '../../../types/usage.js';
 
 // ============================================================================
@@ -306,6 +309,200 @@ export async function getDailySummaries(
 // ============================================================================
 // Query Functions - Conversation Analytics
 // ============================================================================
+
+/**
+ * Get detailed breakdown of a single conversation including per-message costs and tool executions
+ *
+ * @param user_id User ID
+ * @param conversation_id Conversation ID
+ * @returns Complete conversation details with messages and tools, or null if not found
+ */
+export async function getConversationDetails(
+  user_id: string,
+  conversation_id: string
+): Promise<ConversationDetailsResult | null> {
+  try {
+    // Get conversation metadata
+    const metadataResult = await pool.query<{
+      conversation_id: string;
+      title: string;
+      model: string;
+      message_count: number;
+      total_input_tokens: string;
+      total_output_tokens: string;
+      total_cost_usd: string;
+      first_message_at: Date | null;
+      last_message_at: Date | null;
+      deleted_at: Date | null;
+    }>(
+      `SELECT
+        conversation_id,
+        title,
+        model,
+        message_count,
+        total_input_tokens,
+        total_output_tokens,
+        total_cost_usd,
+        first_message_at,
+        last_message_at,
+        deleted_at
+      FROM claude_conversation_metadata
+      WHERE user_id = $1 AND conversation_id = $2`,
+      [user_id, conversation_id]
+    );
+
+    // If conversation not found, return null
+    if (metadataResult.rows.length === 0) {
+      return null;
+    }
+
+    const metadata = metadataResult.rows[0];
+
+    // Get all messages for this conversation
+    const messagesResult = await pool.query<{
+      message_id: string;
+      input_tokens: number;
+      output_tokens: number;
+      cache_creation_tokens: number;
+      cache_read_tokens: number;
+      total_tokens: number;
+      estimated_cost_usd: string;
+      tool_calls_count: number;
+      response_time_ms: number | null;
+      stop_reason: string | null;
+      created_at: Date;
+    }>(
+      `SELECT
+        message_id,
+        input_tokens,
+        output_tokens,
+        cache_creation_tokens,
+        cache_read_tokens,
+        total_tokens,
+        estimated_cost_usd,
+        tool_calls_count,
+        response_time_ms,
+        stop_reason,
+        created_at
+      FROM claude_api_calls
+      WHERE user_id = $1 AND conversation_id = $2
+      ORDER BY created_at ASC`,
+      [user_id, conversation_id]
+    );
+
+    // Get all tool executions linked to this conversation's API calls
+    const toolsResult = await pool.query<{
+      id: string;
+      tool_name: string;
+      tool_input: any;
+      tool_output_summary: string | null;
+      execution_time_ms: number | null;
+      success: boolean;
+      error_message: string | null;
+      created_at: Date;
+      message_id: string;
+    }>(
+      `SELECT
+        t.id,
+        t.tool_name,
+        t.tool_input,
+        t.tool_output_summary,
+        t.execution_time_ms,
+        t.success,
+        t.error_message,
+        t.created_at,
+        a.message_id
+      FROM claude_tool_executions t
+      JOIN claude_api_calls a ON t.api_call_id = a.id
+      WHERE t.user_id = $1 AND a.conversation_id = $2
+      ORDER BY t.created_at ASC`,
+      [user_id, conversation_id]
+    );
+
+    // Convert messages to MessageBreakdown format
+    const messages: MessageBreakdown[] = messagesResult.rows.map((msg, index) => ({
+      message_id: msg.message_id,
+      role: index % 2 === 0 ? 'user' : 'assistant', // Alternate user/assistant based on index
+      content_preview: '', // We don't store message content in database
+      input_tokens: msg.input_tokens,
+      output_tokens: msg.output_tokens,
+      cache_creation_tokens: msg.cache_creation_tokens,
+      cache_read_tokens: msg.cache_read_tokens,
+      total_tokens: msg.total_tokens,
+      estimated_cost_usd: parseFloat(msg.estimated_cost_usd),
+      tool_calls_count: msg.tool_calls_count,
+      response_time_ms: msg.response_time_ms,
+      stop_reason: msg.stop_reason,
+      created_at: msg.created_at
+    }));
+
+    // Convert tools to ToolExecutionDetail format
+    const tool_executions: ToolExecutionDetail[] = toolsResult.rows.map(tool => ({
+      id: tool.id,
+      tool_name: tool.tool_name,
+      tool_input: tool.tool_input,
+      tool_output_summary: tool.tool_output_summary,
+      execution_time_ms: tool.execution_time_ms,
+      success: tool.success,
+      error_message: tool.error_message,
+      created_at: tool.created_at,
+      message_id: tool.message_id
+    }));
+
+    // Calculate summary statistics
+    const total_input_tokens = parseInt(metadata.total_input_tokens);
+    const total_output_tokens = parseInt(metadata.total_output_tokens);
+    const total_cost = parseFloat(metadata.total_cost_usd);
+    const message_count = metadata.message_count;
+
+    // Calculate aggregates for summary
+    let total_cache_creation_tokens = 0;
+    let total_cache_read_tokens = 0;
+    let total_response_time_ms = 0;
+    let response_time_count = 0;
+
+    messages.forEach(msg => {
+      total_cache_creation_tokens += msg.cache_creation_tokens;
+      total_cache_read_tokens += msg.cache_read_tokens;
+      if (msg.response_time_ms !== null) {
+        total_response_time_ms += msg.response_time_ms;
+        response_time_count++;
+      }
+    });
+
+    const average_cost_per_message = message_count > 0 ? total_cost / message_count : 0;
+    const average_response_time_ms = response_time_count > 0 ? total_response_time_ms / response_time_count : 0;
+    const total_tool_calls = tool_executions.length;
+
+    return {
+      metadata: {
+        conversation_id: metadata.conversation_id,
+        title: metadata.title,
+        model: metadata.model,
+        total_cost,
+        total_tokens: total_input_tokens + total_output_tokens,
+        message_count,
+        first_message_at: metadata.first_message_at || new Date(),
+        last_message_at: metadata.last_message_at || new Date(),
+        deleted_at: metadata.deleted_at
+      },
+      messages,
+      tool_executions,
+      summary: {
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_creation_tokens,
+        total_cache_read_tokens,
+        average_cost_per_message,
+        total_tool_calls,
+        average_response_time_ms
+      }
+    };
+  } catch (error) {
+    console.error('Failed to get conversation details:', error);
+    throw new Error(`Failed to get conversation details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 
 /**
  * Get conversation costs with optional filtering, sorting, and pagination

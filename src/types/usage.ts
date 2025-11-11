@@ -240,3 +240,65 @@ export interface ModelUsageBreakdown {
   total_cost: number;
   percentage_of_total_cost: number;
 }
+
+/**
+ * Individual message breakdown for conversation details
+ */
+export interface MessageBreakdown {
+  message_id: string;
+  role: 'user' | 'assistant';
+  content_preview: string; // First 200 chars of message
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  tool_calls_count: number;
+  response_time_ms: number | null;
+  stop_reason: string | null;
+  created_at: Date;
+}
+
+/**
+ * Tool execution detail for conversation breakdown
+ */
+export interface ToolExecutionDetail {
+  id: string;
+  tool_name: string;
+  tool_input: any;
+  tool_output_summary: string | null;
+  execution_time_ms: number | null;
+  success: boolean;
+  error_message: string | null;
+  created_at: Date;
+  message_id: string; // Link to parent message
+}
+
+/**
+ * Complete conversation details with per-message and tool breakdowns
+ */
+export interface ConversationDetailsResult {
+  metadata: {
+    conversation_id: string;
+    title: string;
+    model: string;
+    total_cost: number;
+    total_tokens: number;
+    message_count: number;
+    first_message_at: Date;
+    last_message_at: Date;
+    deleted_at: Date | null;
+  };
+  messages: MessageBreakdown[];
+  tool_executions: ToolExecutionDetail[];
+  summary: {
+    total_input_tokens: number;
+    total_output_tokens: number;
+    total_cache_creation_tokens: number;
+    total_cache_read_tokens: number;
+    average_cost_per_message: number;
+    total_tool_calls: number;
+    average_response_time_ms: number;
+  };
+}
