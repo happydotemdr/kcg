@@ -94,7 +94,7 @@ export default function SummaryCards({ data, startDate, endDate }: SummaryCardsP
       {cards.map((card, index) => (
         <div
           key={index}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow duration-200"
+          className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 p-6 shadow-md hover:shadow-lg transition-all duration-150 hover:-translate-y-0.5"
         >
           <div className="flex items-center justify-between mb-4">
             <div className={`${card.color}`}>

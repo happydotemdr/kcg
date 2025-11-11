@@ -7,7 +7,7 @@ import React from 'react';
 
 export default function AddAccountCard() {
   return (
-    <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-6 hover:border-gray-400 transition-colors">
+    <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-6 shadow-md hover:shadow-lg hover:border-gray-400 transition-all duration-150 hover:-translate-y-0.5">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Account</h3>
 
       <div className="space-y-3">

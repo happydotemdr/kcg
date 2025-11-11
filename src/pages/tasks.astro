@@ -1,0 +1,563 @@
+---
+/**
+ * Tasks Management Page
+ * Full tasks management with tasklist sidebar and multi-account support
+ */
+
+import AppHeader from '@components/AppHeader';
+import { initializeDatabase } from '../lib/db';
+import { findUserByClerkId } from '../lib/db/repositories/users';
+
+// Initialize database
+initializeDatabase();
+
+// Check if user is authenticated
+const auth = await Astro.locals.auth();
+if (!auth?.userId) {
+  return Astro.redirect('/sign-in');
+}
+
+// Get database user
+const dbUser = await findUserByClerkId(auth.userId);
+if (!dbUser) {
+  return new Response('User not found', { status: 404 });
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tasks - Keep Choosing Good</title>
+    <meta name="description" content="Manage your Google Tasks" />
+
+    <!-- Design Tokens -->
+    <link rel="stylesheet" href="/src/styles/themes/tokens.css" />
+  </head>
+  <body>
+    <div class="tasks-page">
+      <!-- Unified Header -->
+      <AppHeader currentPage="tasks" client:only="react" />
+
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <div class="welcome-header">
+          <div>
+            <h1 class="welcome-title">Tasks</h1>
+            <p class="welcome-subtitle">Manage your Google Tasks across all accounts.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content: Sidebar + Task View -->
+      <main class="tasks-content">
+        <div class="tasks-layout">
+          <!-- Sidebar: Tasklists -->
+          <aside class="tasklists-sidebar">
+            <div class="sidebar-header">
+              <h2 class="sidebar-title">Task Lists</h2>
+              <button id="btn-new-list" class="btn-icon" title="New List">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </div>
+
+            <div id="tasklists-container" class="tasklists-container">
+              <div class="loading-state">Loading task lists...</div>
+            </div>
+          </aside>
+
+          <!-- Main: Tasks -->
+          <section class="tasks-main">
+            <div id="task-view" class="task-view">
+              <div class="empty-state">
+                <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>Select a task list to view tasks</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      let selectedTasklistId = null;
+      let selectedAccountEmail = null;
+
+      // Load tasklists
+      async function loadTasklists() {
+        const container = document.getElementById('tasklists-container');
+        if (!container) return;
+
+        try {
+          const response = await fetch('/api/tasklists/list');
+          if (!response.ok) throw new Error('Failed to load task lists');
+
+          const data = await response.json();
+
+          // Clear container
+          container.textContent = '';
+
+          if (!data.tasklists || data.tasklists.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state-sm';
+            empty.textContent = 'No task lists found';
+            container.appendChild(empty);
+            return;
+          }
+
+          // Group by account
+          const grouped = {};
+          data.tasklists.forEach(list => {
+            const email = list.googleAccountEmail || 'Unknown';
+            if (!grouped[email]) grouped[email] = [];
+            grouped[email].push(list);
+          });
+
+          // Render grouped tasklists
+          Object.entries(grouped).forEach(([email, lists]) => {
+            const accountGroup = document.createElement('div');
+            accountGroup.className = 'account-group';
+
+            const accountLabel = document.createElement('div');
+            accountLabel.className = 'account-label';
+            accountLabel.textContent = email;
+            accountGroup.appendChild(accountLabel);
+
+            const tasklistItems = document.createElement('ul');
+            tasklistItems.className = 'tasklist-items';
+
+            lists.forEach(list => {
+              const item = document.createElement('li');
+              item.className = 'tasklist-item';
+              item.dataset.id = list.id;
+              item.dataset.email = email;
+
+              const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              icon.setAttribute('class', 'w-4 h-4 text-gray-400');
+              icon.setAttribute('fill', 'none');
+              icon.setAttribute('stroke', 'currentColor');
+              icon.setAttribute('viewBox', '0 0 24 24');
+              icon.setAttribute('stroke-width', '2');
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.setAttribute('stroke-linecap', 'round');
+              path.setAttribute('stroke-linejoin', 'round');
+              path.setAttribute('d', 'M4 6h16M4 12h16M4 18h16');
+              icon.appendChild(path);
+
+              const span = document.createElement('span');
+              span.textContent = list.title;
+
+              item.appendChild(icon);
+              item.appendChild(span);
+
+              item.addEventListener('click', () => {
+                document.querySelectorAll('.tasklist-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                selectedTasklistId = list.id;
+                selectedAccountEmail = email;
+                loadTasks(selectedTasklistId, selectedAccountEmail);
+              });
+
+              tasklistItems.appendChild(item);
+            });
+
+            accountGroup.appendChild(tasklistItems);
+            container.appendChild(accountGroup);
+          });
+
+          // Auto-select first list
+          const firstItem = container.querySelector('.tasklist-item');
+          if (firstItem) firstItem.click();
+
+        } catch (error) {
+          console.error('Error loading tasklists:', error);
+          container.textContent = '';
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-state';
+          errorDiv.textContent = 'Failed to load task lists';
+          container.appendChild(errorDiv);
+        }
+      }
+
+      // Load tasks for selected tasklist
+      async function loadTasks(tasklistId, accountEmail) {
+        const taskView = document.getElementById('task-view');
+        if (!taskView) return;
+
+        taskView.textContent = '';
+        const loading = document.createElement('div');
+        loading.className = 'loading-state';
+        loading.textContent = 'Loading tasks...';
+        taskView.appendChild(loading);
+
+        try {
+          const params = new URLSearchParams({ tasklistId });
+          if (accountEmail) params.append('googleAccountEmail', accountEmail);
+
+          const response = await fetch(`/api/tasks/list?${params}`);
+          if (!response.ok) throw new Error('Failed to load tasks');
+
+          const data = await response.json();
+
+          taskView.textContent = '';
+          renderSimpleTaskList(data.tasks || []);
+
+        } catch (error) {
+          console.error('Error loading tasks:', error);
+          taskView.textContent = '';
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-state';
+          errorDiv.textContent = 'Failed to load tasks';
+          taskView.appendChild(errorDiv);
+        }
+      }
+
+      // Simple task list renderer
+      function renderSimpleTaskList(tasks) {
+        const taskView = document.getElementById('task-view');
+        if (!taskView) return;
+
+        taskView.textContent = '';
+
+        if (tasks.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state-sm';
+          empty.textContent = 'No tasks in this list';
+          taskView.appendChild(empty);
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'simple-task-list';
+
+        tasks.forEach(task => {
+          const isCompleted = task.status === 'completed';
+          const item = document.createElement('li');
+          item.className = 'simple-task-item' + (isCompleted ? ' completed' : '');
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = isCompleted;
+          checkbox.className = 'task-checkbox';
+          checkbox.dataset.id = task.id;
+
+          checkbox.addEventListener('change', async (e) => {
+            const taskId = e.target.dataset.id;
+            const newStatus = e.target.checked ? 'completed' : 'needsAction';
+
+            try {
+              const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+              });
+
+              if (!response.ok) throw new Error('Failed to update task');
+            } catch (error) {
+              console.error('Error updating task:', error);
+              e.target.checked = !e.target.checked; // Revert
+            }
+          });
+
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'task-title';
+          titleSpan.textContent = task.title;
+
+          item.appendChild(checkbox);
+          item.appendChild(titleSpan);
+
+          if (task.due) {
+            const dueSpan = document.createElement('span');
+            dueSpan.className = 'task-due';
+            dueSpan.textContent = new Date(task.due).toLocaleDateString();
+            item.appendChild(dueSpan);
+          }
+
+          list.appendChild(item);
+        });
+
+        taskView.appendChild(list);
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        loadTasklists();
+
+        // New list button (placeholder)
+        const newListBtn = document.getElementById('btn-new-list');
+        if (newListBtn) {
+          newListBtn.addEventListener('click', () => {
+            alert('Create new list feature coming soon!');
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    background: var(--color-background);
+  }
+
+  .tasks-page {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, var(--color-background) 0%, var(--color-surface) 100%);
+  }
+
+  /* Welcome Section */
+  .welcome-section {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2rem;
+  }
+
+  .welcome-header {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-light);
+  }
+
+  /* Main Layout */
+  .tasks-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .tasks-layout {
+    display: flex;
+    gap: 1.5rem;
+    min-height: 600px;
+  }
+
+  /* Sidebar */
+  .tasklists-sidebar {
+    width: 280px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 300px);
+  }
+
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text);
+    flex: 1;
+  }
+
+  .btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: var(--color-text-light);
+    transition: color var(--transition-base);
+  }
+
+  .btn-icon:hover {
+    color: var(--color-primary);
+  }
+
+  .tasklists-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .account-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .account-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .tasklist-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .tasklist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    color: var(--color-text);
+    font-size: 0.875rem;
+  }
+
+  .tasklist-item:hover {
+    background: var(--color-background);
+  }
+
+  .tasklist-item.active {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .tasklist-item.active svg {
+    color: white;
+  }
+
+  /* Main Task View */
+  .tasks-main {
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+  }
+
+  .task-view {
+    min-height: 400px;
+  }
+
+  /* Loading/Empty States */
+  .loading-state,
+  .empty-state,
+  .empty-state-sm,
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-light);
+    text-align: center;
+  }
+
+  .empty-state-sm {
+    padding: 1.5rem;
+  }
+
+  .error-state {
+    color: var(--color-error);
+  }
+
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  /* Simple Task List */
+  .simple-task-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .simple-task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+  }
+
+  .simple-task-item:hover {
+    border-color: var(--color-primary);
+  }
+
+  .simple-task-item.completed .task-title {
+    text-decoration: line-through;
+    color: var(--color-text-light);
+  }
+
+  .task-checkbox {
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+  }
+
+  .task-title {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+
+  .task-due {
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    padding: 0.25rem 0.5rem;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .tasks-layout {
+      flex-direction: column;
+    }
+
+    .tasklists-sidebar {
+      width: 100%;
+      max-height: 300px;
+    }
+
+    .welcome-section {
+      padding: 1.5rem;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+    }
+
+    .tasks-content {
+      padding: 1rem;
+    }
+  }
+</style>

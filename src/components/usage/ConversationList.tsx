@@ -180,7 +180,7 @@ export default function ConversationList({
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 p-4 shadow-md hover:shadow-lg transition-all duration-150">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search Input */}
           <div className="flex-1">
@@ -259,7 +259,7 @@ export default function ConversationList({
       </div>
 
       {/* Table Container */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 overflow-hidden shadow-md hover:shadow-lg transition-all duration-150">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
@@ -396,7 +396,7 @@ export default function ConversationList({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 p-4 shadow-md hover:shadow-lg transition-all duration-150">
           <div className="flex items-center justify-between">
             {/* Page Info and Size Selector */}
             <div className="flex items-center gap-4">

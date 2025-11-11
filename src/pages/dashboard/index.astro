@@ -248,16 +248,17 @@ const email = dbUser?.email || '';
 
   /* Card Styles */
   .card {
-    background: var(--color-surface);
+    background: #ffffff;
+    border: 2px solid #f3f4f6;
     border-radius: var(--radius-lg);
     padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
   }
 
   .card:hover {
-    transform: var(--hover-transform);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 
   .card-header {

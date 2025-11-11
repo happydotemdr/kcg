@@ -8,7 +8,7 @@ import React from 'react';
 import { UserButton } from '@clerk/astro/react';
 
 interface AppHeaderProps {
-  currentPage?: 'dashboard' | 'chat' | 'integrations' | 'contacts' | 'usage' | 'other';
+  currentPage?: 'dashboard' | 'chat' | 'integrations' | 'contacts' | 'tasks' | 'usage' | 'other';
 }
 
 export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
@@ -17,6 +17,7 @@ export default function AppHeader({ currentPage = 'other' }: AppHeaderProps) {
     { href: '/chat', label: 'Claude Chat', key: 'chat' },
     { href: '/integrations', label: 'Integrations', key: 'integrations' },
     { href: '/contacts', label: 'Contacts', key: 'contacts' },
+    { href: '/tasks', label: 'Tasks', key: 'tasks' },
     { href: '/usage', label: 'Usage', key: 'usage' },
   ];
 

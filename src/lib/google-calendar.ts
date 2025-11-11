@@ -14,7 +14,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4321/api/auth/google/callback';
 
-// Required scopes for calendar AND Gmail access (unified OAuth)
+// Required scopes for calendar, Gmail, Contacts, and Tasks access (unified OAuth)
 export const CALENDAR_SCOPES = [
   // User info scope (to get email address)
   'https://www.googleapis.com/auth/userinfo.email', // Get user's email address
@@ -29,6 +29,12 @@ export const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/gmail.compose', // Create and send emails
   'https://www.googleapis.com/auth/gmail.modify', // Modify emails (labels, etc)
   'https://mail.google.com/', // Full Gmail access (includes all above)
+
+  // Contacts scope (People API)
+  'https://www.googleapis.com/auth/contacts', // Full contacts access
+
+  // Tasks scope
+  'https://www.googleapis.com/auth/tasks', // Full tasks access
 ];
 
 /**

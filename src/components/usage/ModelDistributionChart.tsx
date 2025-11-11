@@ -177,7 +177,7 @@ export default function ModelDistributionChart({ data }: ModelDistributionChartP
   // Empty state
   if (chartData.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 p-6 shadow-md hover:shadow-lg transition-all duration-150">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Cost by Model
         </h3>
@@ -189,7 +189,7 @@ export default function ModelDistributionChart({ data }: ModelDistributionChartP
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-100 dark:border-gray-700 p-6 shadow-md hover:shadow-lg transition-all duration-150">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
         Cost by Model
       </h3>

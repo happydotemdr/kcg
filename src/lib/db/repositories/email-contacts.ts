@@ -24,8 +24,9 @@ export async function createContact(data: CreateEmailContact): Promise<EmailCont
       verification_status, verification_method, verified_at, verified_by,
       confidence_score, email_count, first_seen, last_seen,
       linked_calendar_events, linked_family_members,
-      extraction_metadata, notes
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      extraction_metadata, notes,
+      google_contact_resource_name, last_synced_to_google, sync_enabled
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
     RETURNING *`,
     [
       data.user_id,
@@ -49,6 +50,9 @@ export async function createContact(data: CreateEmailContact): Promise<EmailCont
       data.linked_family_members,
       data.extraction_metadata ? JSON.stringify(data.extraction_metadata) : null,
       data.notes || null,
+      data.google_contact_resource_name || null,
+      data.last_synced_to_google || null,
+      data.sync_enabled !== undefined ? data.sync_enabled : false,
     ]
   );
   return result.rows[0];
@@ -288,4 +292,97 @@ export async function deleteById(contactId: string): Promise<boolean> {
     [contactId]
   );
   return result.rowCount !== null && result.rowCount > 0;
+}
+
+/**
+ * Enable Google sync for a contact
+ */
+export async function enableGoogleSync(
+  contactId: string,
+  enabled: boolean = true
+): Promise<EmailContact> {
+  const result = await query<EmailContact>(
+    `UPDATE email_contacts
+     SET sync_enabled = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2
+     RETURNING *`,
+    [enabled, contactId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error(`Contact ${contactId} not found`);
+  }
+
+  return result.rows[0];
+}
+
+/**
+ * Update Google resource name and sync timestamp
+ */
+export async function updateGoogleResourceName(
+  contactId: string,
+  resourceName: string
+): Promise<EmailContact> {
+  const result = await query<EmailContact>(
+    `UPDATE email_contacts
+     SET google_contact_resource_name = $1,
+         last_synced_to_google = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2
+     RETURNING *`,
+    [resourceName, contactId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error(`Contact ${contactId} not found`);
+  }
+
+  return result.rows[0];
+}
+
+/**
+ * Find contacts with sync enabled
+ */
+export async function findSyncEnabledContacts(userId: string): Promise<EmailContact[]> {
+  const result = await query<EmailContact>(
+    `SELECT * FROM email_contacts
+     WHERE user_id = $1 AND sync_enabled = TRUE
+     ORDER BY last_synced_to_google ASC NULLS FIRST`,
+    [userId]
+  );
+  return result.rows;
+}
+
+/**
+ * Find contacts by Google resource name
+ */
+export async function findContactsByResourceName(
+  userId: string,
+  resourceNames: string[]
+): Promise<EmailContact[]> {
+  if (resourceNames.length === 0) {
+    return [];
+  }
+
+  const result = await query<EmailContact>(
+    `SELECT * FROM email_contacts
+     WHERE user_id = $1 AND google_contact_resource_name = ANY($2)`,
+    [userId, resourceNames]
+  );
+  return result.rows;
+}
+
+/**
+ * Find contact by Google resource name
+ */
+export async function findByResourceName(
+  userId: string,
+  resourceName: string
+): Promise<EmailContact | null> {
+  const result = await query<EmailContact>(
+    `SELECT * FROM email_contacts
+     WHERE user_id = $1 AND google_contact_resource_name = $2`,
+    [userId, resourceName]
+  );
+  return result.rows[0] || null;
 }

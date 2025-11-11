@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import type { EmailContact } from '@/lib/db/types';
+import { useState, useEffect } from 'react';
+import type { EmailContact, ContactSource } from '@/lib/db/types';
+import ContactSourcesBadge from './ContactSourcesBadge';
+import ContactSyncControls from './ContactSyncControls';
 
 interface ContactCardProps {
   contact: EmailContact;
@@ -38,8 +40,30 @@ export default function ContactCard({
   showActions = true,
 }: ContactCardProps) {
   const [loading, setLoading] = useState(false);
+  const [sources, setSources] = useState<ContactSource[]>([]);
+  const [loadingSources, setLoadingSources] = useState(false);
   const trust = getTrustIndicator(contact.verification_status);
   const sourceColor = SOURCE_TYPE_COLORS[contact.source_type || 'other'];
+
+  // Fetch contact sources on mount
+  useEffect(() => {
+    const fetchSources = async () => {
+      setLoadingSources(true);
+      try {
+        const response = await fetch(`/api/contacts/${contact.id}/sources`);
+        if (response.ok) {
+          const data = await response.json();
+          setSources(data.sources || []);
+        }
+      } catch (error) {
+        console.error('Error fetching contact sources:', error);
+      } finally {
+        setLoadingSources(false);
+      }
+    };
+
+    fetchSources();
+  }, [contact.id]);
 
   const handleVerify = async () => {
     if (!onVerify) return;
@@ -205,6 +229,30 @@ export default function ContactCard({
       >
         📧 {contact.email_count} email{contact.email_count !== 1 ? 's' : ''}
       </div>
+
+      {/* Contact Sources Badge */}
+      {!loadingSources && (
+        <div style={{ marginBottom: '1rem' }}>
+          <ContactSourcesBadge sources={sources} />
+        </div>
+      )}
+
+      {/* Contact Sync Controls */}
+      {!loadingSources && sources.length > 0 && (
+        <div style={{ marginBottom: '1rem' }}>
+          <ContactSyncControls
+            contactId={contact.id}
+            currentSources={sources}
+            onSyncComplete={() => {
+              // Refetch sources after sync
+              fetch(`/api/contacts/${contact.id}/sources`)
+                .then(res => res.json())
+                .then(data => setSources(data.sources || []))
+                .catch(err => console.error('Error refetching sources:', err));
+            }}
+          />
+        </div>
+      )}
 
       {/* Phone Numbers */}
       {contact.phone_numbers.length > 0 && (

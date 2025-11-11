@@ -12,6 +12,7 @@ interface AccountCardProps {
   hasCalendar: boolean;
   hasGmail: boolean;
   hasContacts: boolean;
+  hasTasks: boolean;
   onDisconnect: () => void;
   onSetPrimary: () => void;
 }
@@ -23,11 +24,12 @@ export default function AccountCard({
   hasCalendar,
   hasGmail,
   hasContacts,
+  hasTasks,
   onDisconnect,
   onSetPrimary,
 }: AccountCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-lg border-2 border-gray-100 p-6 shadow-md hover:shadow-lg transition-all duration-150 hover:-translate-y-0.5">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -93,6 +95,19 @@ export default function AccountCard({
           </svg>
           <span className={hasContacts ? 'text-gray-700' : 'text-gray-500'}>
             Contacts {hasContacts ? '(Active)' : '(Not configured)'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm">
+          <svg className={`w-4 h-4 ${hasTasks ? 'text-green-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {hasTasks ? (
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"/>
+            ) : (
+              <path d="M18 6L6 18M6 6l12 12"/>
+            )}
+          </svg>
+          <span className={hasTasks ? 'text-gray-700' : 'text-gray-500'}>
+            Tasks {hasTasks ? '(Active)' : '(Not configured)'}
           </span>
         </div>
       </div>

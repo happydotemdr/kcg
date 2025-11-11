@@ -452,6 +452,12 @@ export interface EmailContact {
   // Metadata
   extraction_metadata: Record<string, any> | null;
   notes: string | null;
+
+  // Google Contacts sync fields
+  google_contact_resource_name: string | null;
+  last_synced_to_google: Date | null;
+  sync_enabled: boolean;
+
   created_at: Date;
   updated_at: Date;
 }
@@ -493,4 +499,113 @@ export interface EmailContactAssociation {
 export type CreateEmailContactAssociation = Omit<EmailContactAssociation, 'id' | 'extracted_at'> & {
   id?: string;
   extracted_at?: Date;
+}
+
+// ============================================================================
+// Google Contacts Integration Types
+// ============================================================================
+
+/**
+ * Contact Source
+ * Maps email contacts to external contact sources (Google/Microsoft)
+ */
+export interface ContactSource {
+  id: string;
+  email_contact_id: string;
+  provider: 'google_contacts' | 'microsoft_contacts';
+  external_id: string;
+  external_resource_name: string;
+  account_email: string;
+  etag: string | null;
+  last_synced_at: Date | null;
+  sync_direction: 'import' | 'export' | 'bidirectional';
+  metadata: Record<string, any> | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateContactSource = Omit<ContactSource, 'id' | 'created_at' | 'updated_at' | 'last_synced_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+  last_synced_at?: Date | null;
+};
+
+/**
+ * Contact Sync State
+ * Tracks sync status for Google Contacts API
+ */
+export interface ContactSyncState {
+  id: string;
+  user_id: string;
+  google_account_email: string;
+  sync_token: string | null;
+  last_full_sync_at: Date | null;
+  last_incremental_sync_at: Date | null;
+  sync_status: 'never_synced' | 'syncing' | 'completed' | 'failed';
+  error_message: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateContactSyncState = Omit<ContactSyncState, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
+// ============================================================================
+// Google Tasks Integration Types
+// ============================================================================
+
+/**
+ * Task List
+ * Represents a Google Tasks task list
+ */
+export interface TaskList {
+  id: string;
+  user_id: string;
+  google_account_email: string;
+  google_tasklist_id: string;
+  title: string;
+  is_default: boolean;
+  metadata: Record<string, any> | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateTaskList = Omit<TaskList, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
+/**
+ * Task
+ * Represents a Google Tasks task
+ */
+export interface Task {
+  id: string;
+  user_id: string;
+  google_account_email: string;
+  google_task_id: string;
+  google_tasklist_id: string;
+  title: string;
+  notes: string | null;
+  status: 'needsAction' | 'completed';
+  due_date: Date | null;
+  completed_date: Date | null;
+  calendar_event_id: string | null;
+  parent_task_id: string | null;
+  position: string | null;
+  metadata: Record<string, any> | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type CreateTask = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed_date'> & {
+  id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+  completed_date?: Date | null;
 }
