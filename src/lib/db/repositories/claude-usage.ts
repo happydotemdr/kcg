@@ -41,7 +41,6 @@ export async function recordApiCall(data: RecordApiCallInput): Promise<ClaudeApi
   try {
     const cache_creation_tokens = data.cache_creation_tokens || 0;
     const cache_read_tokens = data.cache_read_tokens || 0;
-    const total_tokens = data.input_tokens + data.output_tokens + cache_creation_tokens + cache_read_tokens;
     const tool_calls_count = data.tool_calls_count || 0;
 
     const result = await pool.query<ClaudeApiCall>(
@@ -54,15 +53,14 @@ export async function recordApiCall(data: RecordApiCallInput): Promise<ClaudeApi
         model,
         input_tokens,
         output_tokens,
-        cache_creation_tokens,
-        cache_read_tokens,
-        total_tokens,
+        cache_creation_input_tokens,
+        cache_read_input_tokens,
         estimated_cost_usd,
         stop_reason,
         tool_calls_count,
         response_time_ms,
         error_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         data.user_id,
@@ -75,7 +73,6 @@ export async function recordApiCall(data: RecordApiCallInput): Promise<ClaudeApi
         data.output_tokens,
         cache_creation_tokens,
         cache_read_tokens,
-        total_tokens,
         data.estimated_cost_usd,
         data.stop_reason || null,
         tool_calls_count,
@@ -165,7 +162,7 @@ export async function upsertConversationMetadata(
         first_message_at,
         last_message_at
       ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, NOW(), NOW())
-      ON CONFLICT (user_id, conversation_id)
+      ON CONFLICT (conversation_id)
       DO UPDATE SET
         message_count = claude_conversation_metadata.message_count + 1,
         total_input_tokens = claude_conversation_metadata.total_input_tokens + $5,
@@ -225,7 +222,7 @@ export async function getUserUsageSummary(
       FROM claude_api_calls
       WHERE user_id = $1
         AND created_at >= $2
-        AND created_at < $3 + INTERVAL '1 day'`,
+        AND created_at < $3::timestamp + INTERVAL '1 day'`,
       [user_id, start_date, end_date]
     );
 
@@ -238,16 +235,24 @@ export async function getUserUsageSummary(
       cost: string;
       tokens: string;
       api_calls: string;
+      input_tokens: string;
+      output_tokens: string;
+      cache_read_tokens: string;
+      cache_creation_tokens: string;
     }>(
       `SELECT
         DATE(created_at) as period,
         COALESCE(SUM(estimated_cost_usd), 0) as cost,
         COALESCE(SUM(total_tokens), 0) as tokens,
-        COUNT(*) as api_calls
+        COUNT(*) as api_calls,
+        COALESCE(SUM(input_tokens), 0) as input_tokens,
+        COALESCE(SUM(output_tokens), 0) as output_tokens,
+        COALESCE(SUM(cache_read_input_tokens), 0) as cache_read_tokens,
+        COALESCE(SUM(cache_creation_input_tokens), 0) as cache_creation_tokens
       FROM claude_api_calls
       WHERE user_id = $1
         AND created_at >= $2
-        AND created_at < $3 + INTERVAL '1 day'
+        AND created_at < $3::timestamp + INTERVAL '1 day'
       GROUP BY DATE(created_at)
       ORDER BY period ASC`,
       [user_id, start_date, end_date]
@@ -267,7 +272,11 @@ export async function getUserUsageSummary(
         period: row.period,
         cost: parseFloat(row.cost),
         tokens: parseInt(row.tokens),
-        api_calls: parseInt(row.api_calls)
+        api_calls: parseInt(row.api_calls),
+        input_tokens: parseInt(row.input_tokens),
+        output_tokens: parseInt(row.output_tokens),
+        cache_read_tokens: parseInt(row.cache_read_tokens),
+        cache_creation_tokens: parseInt(row.cache_creation_tokens)
       }))
     };
   } catch (error) {
@@ -647,7 +656,7 @@ export async function getToolUsageBreakdown(
         JOIN claude_api_calls ac ON te.api_call_id = ac.id
         WHERE te.user_id = $1
           AND te.created_at >= $2
-          AND te.created_at < $3 + INTERVAL '1 day'
+          AND te.created_at < $3::timestamp + INTERVAL '1 day'
         GROUP BY te.tool_name
       )
       SELECT * FROM tool_stats
@@ -701,14 +710,14 @@ export async function getModelUsageBreakdown(
         FROM claude_api_calls
         WHERE user_id = $1
           AND created_at >= $2
-          AND created_at < $3 + INTERVAL '1 day'
+          AND created_at < $3::timestamp + INTERVAL '1 day'
         GROUP BY model
       ),
       total_cost_all AS (
         SELECT COALESCE(SUM(estimated_cost_usd), 0) as total FROM claude_api_calls
         WHERE user_id = $1
           AND created_at >= $2
-          AND created_at < $3 + INTERVAL '1 day'
+          AND created_at < $3::timestamp + INTERVAL '1 day'
       )
       SELECT
         ms.*,

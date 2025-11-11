@@ -12,6 +12,9 @@ import ErrorMessage from './ErrorMessage';
 import SummaryCards from './SummaryCards';
 import ConversationList from './ConversationList';
 import ConversationDetails from './ConversationDetails';
+import TokenBreakdownChart from './TokenBreakdownChart';
+import ApiCallsChart from './ApiCallsChart';
+import CostTrendChart from './CostTrendChart';
 
 export default function UsageDashboard() {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -155,6 +158,20 @@ export default function UsageDashboard() {
     }
   };
 
+  // Convert dateRange preset to valid chart groupBy value
+  const getGroupBy = (): 'day' | 'week' | 'month' => {
+    const preset = dateRange.preset;
+    // Map all presets to day/week/month for charts
+    if (preset === 'last_30_days' || preset === 'this_month' || preset === 'last_month') {
+      return 'day';
+    }
+    if (preset === 'last_7_days') {
+      return 'day';
+    }
+    // today, yesterday, custom default to day
+    return 'day';
+  };
+
   return (
     <UsageDashboardLayout
       dateRange={dateRange}
@@ -169,13 +186,28 @@ export default function UsageDashboard() {
           {summaryData.data && (
             <div className="space-y-6">
               <SummaryCards data={summaryData.data.summary} />
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Raw Data (Phase 8 will add visualizations)
-                </h3>
-                <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-96">
-                  {JSON.stringify(summaryData.data, null, 2)}
-                </pre>
+
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Cost & Token Trends
+                  </h3>
+                  <CostTrendChart data={summaryData.data.summary.time_series} groupBy={getGroupBy()} />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Token Usage Breakdown
+                  </h3>
+                  <TokenBreakdownChart data={summaryData.data.summary.time_series} groupBy={getGroupBy()} />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    API Call Volume
+                  </h3>
+                  <ApiCallsChart data={summaryData.data.summary.time_series} groupBy={getGroupBy()} />
+                </div>
               </div>
             </div>
           )}

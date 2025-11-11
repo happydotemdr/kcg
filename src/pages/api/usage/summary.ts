@@ -32,8 +32,8 @@ function parseDate(dateStr: string | null, defaultDate: Date): Date {
  * Group time series data by week
  * Week starts on Monday (ISO week)
  */
-function groupByWeek(timeSeries: Array<{ period: string; cost: number; tokens: number; api_calls: number }>) {
-  const weekMap = new Map<string, { cost: number; tokens: number; api_calls: number }>();
+function groupByWeek(timeSeries: Array<{ period: string; cost: number; tokens: number; api_calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_creation_tokens: number }>) {
+  const weekMap = new Map<string, { cost: number; tokens: number; api_calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_creation_tokens: number }>();
 
   for (const entry of timeSeries) {
     const date = new Date(entry.period);
@@ -47,11 +47,15 @@ function groupByWeek(timeSeries: Array<{ period: string; cost: number; tokens: n
 
     const weekKey = weekStart.toISOString().split('T')[0];
 
-    const existing = weekMap.get(weekKey) || { cost: 0, tokens: 0, api_calls: 0 };
+    const existing = weekMap.get(weekKey) || { cost: 0, tokens: 0, api_calls: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_creation_tokens: 0 };
     weekMap.set(weekKey, {
       cost: existing.cost + entry.cost,
       tokens: existing.tokens + entry.tokens,
-      api_calls: existing.api_calls + entry.api_calls
+      api_calls: existing.api_calls + entry.api_calls,
+      input_tokens: existing.input_tokens + entry.input_tokens,
+      output_tokens: existing.output_tokens + entry.output_tokens,
+      cache_read_tokens: existing.cache_read_tokens + entry.cache_read_tokens,
+      cache_creation_tokens: existing.cache_creation_tokens + entry.cache_creation_tokens
     });
   }
 
@@ -63,19 +67,23 @@ function groupByWeek(timeSeries: Array<{ period: string; cost: number; tokens: n
 /**
  * Group time series data by month
  */
-function groupByMonth(timeSeries: Array<{ period: string; cost: number; tokens: number; api_calls: number }>) {
-  const monthMap = new Map<string, { cost: number; tokens: number; api_calls: number }>();
+function groupByMonth(timeSeries: Array<{ period: string; cost: number; tokens: number; api_calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_creation_tokens: number }>) {
+  const monthMap = new Map<string, { cost: number; tokens: number; api_calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_creation_tokens: number }>();
 
   for (const entry of timeSeries) {
     const date = new Date(entry.period);
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
     const monthKey = monthStart.toISOString().split('T')[0];
 
-    const existing = monthMap.get(monthKey) || { cost: 0, tokens: 0, api_calls: 0 };
+    const existing = monthMap.get(monthKey) || { cost: 0, tokens: 0, api_calls: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_creation_tokens: 0 };
     monthMap.set(monthKey, {
       cost: existing.cost + entry.cost,
       tokens: existing.tokens + entry.tokens,
-      api_calls: existing.api_calls + entry.api_calls
+      api_calls: existing.api_calls + entry.api_calls,
+      input_tokens: existing.input_tokens + entry.input_tokens,
+      output_tokens: existing.output_tokens + entry.output_tokens,
+      cache_read_tokens: existing.cache_read_tokens + entry.cache_read_tokens,
+      cache_creation_tokens: existing.cache_creation_tokens + entry.cache_creation_tokens
     });
   }
 

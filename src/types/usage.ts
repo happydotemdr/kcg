@@ -200,6 +200,10 @@ export interface UsageSummaryResult {
     cost: number;
     tokens: number;
     api_calls: number;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_creation_tokens: number;
   }>;
 }
 
