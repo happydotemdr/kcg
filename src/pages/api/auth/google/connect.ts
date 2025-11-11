@@ -23,19 +23,15 @@ export const GET: APIRoute = async ({ locals, redirect, url }) => {
     // Get mode parameter (optional: 'add' to add a second+ account)
     const mode = url.searchParams.get('mode');
 
-    // Store user ID and mode in state for callback
-    // Format: userId|mode (e.g., "user_123|add")
-    const authUrl = getAuthorizationUrl();
-
     // Build state parameter with userId and optional mode
+    // Format: userId|mode (e.g., "user_123|add")
     const stateValue = mode ? `${userId}|${mode}` : userId;
-    const urlWithState = `${authUrl}&state=${encodeURIComponent(stateValue)}`;
 
-    // Add prompt=consent to force account selection when adding accounts
-    const finalUrl = mode === 'add' ? `${urlWithState}&prompt=consent` : urlWithState;
+    // Generate auth URL with state parameter included
+    const authUrl = getAuthorizationUrl(stateValue);
 
     // Redirect to Google OAuth consent screen
-    return redirect(finalUrl, 302);
+    return redirect(authUrl, 302);
 
   } catch (error) {
     console.error('Google OAuth connect error:', error);

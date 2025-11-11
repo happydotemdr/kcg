@@ -17,24 +17,20 @@ const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost
 // Required scopes for calendar, Gmail, Contacts, and Tasks access (unified OAuth)
 export const CALENDAR_SCOPES = [
   // User info scope (to get email address)
-  'https://www.googleapis.com/auth/userinfo.email', // Get user's email address
-  'https://www.googleapis.com/auth/userinfo.profile', // Get user's profile info
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
 
-  // Calendar scopes (full CRUD permissions)
-  'https://www.googleapis.com/auth/calendar', // Full calendar access for CRUD operations
-  'https://www.googleapis.com/auth/calendar.events', // Full event access
+  // Calendar scopes (calendar scope includes calendar.events)
+  'https://www.googleapis.com/auth/calendar',
 
-  // Gmail scopes (read, compose, modify)
-  'https://www.googleapis.com/auth/gmail.readonly', // Read all emails
-  'https://www.googleapis.com/auth/gmail.compose', // Create and send emails
-  'https://www.googleapis.com/auth/gmail.modify', // Modify emails (labels, etc)
-  'https://mail.google.com/', // Full Gmail access (includes all above)
+  // Gmail scope (https://mail.google.com/ includes readonly, compose, modify)
+  'https://mail.google.com/',
 
   // Contacts scope (People API)
-  'https://www.googleapis.com/auth/contacts', // Full contacts access
+  'https://www.googleapis.com/auth/contacts',
 
   // Tasks scope
-  'https://www.googleapis.com/auth/tasks', // Full tasks access
+  'https://www.googleapis.com/auth/tasks',
 ];
 
 /**
@@ -51,12 +47,13 @@ export function createOAuth2Client() {
 /**
  * Generate authorization URL for user to grant access
  */
-export function getAuthorizationUrl(): string {
+export function getAuthorizationUrl(state?: string): string {
   const oauth2Client = createOAuth2Client();
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: CALENDAR_SCOPES,
     prompt: 'consent', // Force consent screen to ensure we get refresh token
+    state: state, // Include state parameter for security
   });
 }
 
