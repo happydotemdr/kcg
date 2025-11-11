@@ -15,9 +15,11 @@ interface SummaryCardsProps {
     average_cost_per_call: number;
     average_response_time_ms: number;
   };
+  startDate: string;
+  endDate: string;
 }
 
-export default function SummaryCards({ data }: SummaryCardsProps) {
+export default function SummaryCards({ data, startDate, endDate }: SummaryCardsProps) {
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
@@ -27,6 +29,18 @@ export default function SummaryCards({ data }: SummaryCardsProps) {
     }
     return num.toLocaleString();
   };
+
+  // Calculate actual days in date range (minimum 1 day for same-day queries)
+  const calculateDays = (): number => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // If same day (diffDays = 0), treat as 1 day
+    return diffDays === 0 ? 1 : diffDays;
+  };
+
+  const daysInRange = calculateDays();
 
   const cards = [
     {
@@ -59,7 +73,7 @@ export default function SummaryCards({ data }: SummaryCardsProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      secondary: `${(data.api_calls_count / 30).toFixed(1)} per day avg`,
+      secondary: `${(data.api_calls_count / daysInRange).toFixed(1)} per day avg`,
       color: 'text-purple-600 dark:text-purple-400'
     },
     {

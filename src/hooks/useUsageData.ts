@@ -99,6 +99,7 @@ export function useConversations(params: {
   limit?: number;
   offset?: number;
   includeDeleted?: boolean;
+  search?: string;
   enabled?: boolean;
 }): UseDataResult<ConversationsResponse> {
   const [state, setState] = useState<UseDataResult<ConversationsResponse>>({
@@ -124,7 +125,8 @@ export function useConversations(params: {
         sortOrder: params.sortOrder,
         limit: params.limit,
         offset: params.offset,
-        includeDeleted: params.includeDeleted
+        includeDeleted: params.includeDeleted,
+        search: params.search
       });
 
       setState({
@@ -149,6 +151,7 @@ export function useConversations(params: {
     params.limit,
     params.offset,
     params.includeDeleted,
+    params.search,
     params.enabled
   ]);
 

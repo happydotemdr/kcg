@@ -114,6 +114,9 @@ export const GET: APIRoute = async ({ locals, request }) => {
     const includeDeletedParam = url.searchParams.get('include_deleted') || 'false';
     const include_deleted = includeDeletedParam === 'true';
 
+    // Search parameter
+    const search = url.searchParams.get('search') || undefined;
+
     // Query conversation costs
     const result = await getConversationCosts({
       user_id: user.id,
@@ -123,7 +126,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
       sort_order,
       limit,
       offset,
-      include_deleted
+      include_deleted,
+      search
     });
 
     // Calculate pagination metadata
@@ -152,7 +156,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
         end_date: end_date?.toISOString() || null,
         sort_by,
         sort_order,
-        include_deleted
+        include_deleted,
+        search: search || null
       }
     };
 

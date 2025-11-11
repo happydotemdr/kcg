@@ -44,6 +44,7 @@ export interface ConversationsResponse {
     sort_by: string;
     sort_order: string;
     include_deleted: boolean;
+    search?: string | null;
   };
 }
 
@@ -143,6 +144,7 @@ export async function fetchConversations(params: {
   limit?: number;
   offset?: number;
   includeDeleted?: boolean;
+  search?: string;
 }): Promise<ConversationsResponse> {
   const query = new URLSearchParams();
 
@@ -153,6 +155,7 @@ export async function fetchConversations(params: {
   if (params.limit) query.append('limit', params.limit.toString());
   if (params.offset) query.append('offset', params.offset.toString());
   if (params.includeDeleted) query.append('include_deleted', 'true');
+  if (params.search) query.append('search', params.search);
 
   return fetchAPI<ConversationsResponse>(`/api/usage/conversations?${query}`);
 }

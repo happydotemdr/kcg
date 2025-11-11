@@ -523,7 +523,7 @@ export async function getConversationCosts(
   query: ConversationCostQuery
 ): Promise<{ conversations: ConversationCostResult[]; total_count: number }> {
   try {
-    const { user_id, start_date, end_date, sort_by = 'date', sort_order = 'desc', limit = 50, offset = 0, include_deleted = false } = query;
+    const { user_id, start_date, end_date, sort_by = 'date', sort_order = 'desc', limit = 50, offset = 0, include_deleted = false, search } = query;
 
     // Build WHERE clause
     const whereConditions = ['user_id = $1'];
@@ -542,6 +542,12 @@ export async function getConversationCosts(
     if (end_date) {
       whereConditions.push(`last_message_at <= $${paramIndex}`);
       params.push(end_date);
+      paramIndex++;
+    }
+
+    if (search) {
+      whereConditions.push(`title ILIKE $${paramIndex}`);
+      params.push(`%${search}%`);
       paramIndex++;
     }
 

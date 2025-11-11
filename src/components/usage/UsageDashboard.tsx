@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import UsageDashboardLayout from './UsageDashboardLayout';
 import { getDefaultStartDate, getDefaultEndDate, type DateRange } from '../../lib/usage-date-utils';
 import { useUsageSummary, useConversations, useToolsBreakdown, useModelsBreakdown } from '../../hooks/useUsageData';
-import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import SummaryCards from './SummaryCards';
 import ConversationList from './ConversationList';
@@ -15,6 +14,11 @@ import ConversationDetails from './ConversationDetails';
 import TokenBreakdownChart from './TokenBreakdownChart';
 import ApiCallsChart from './ApiCallsChart';
 import CostTrendChart from './CostTrendChart';
+import ToolUsageChart from './ToolUsageChart';
+import ModelDistributionChart from './ModelDistributionChart';
+import SummaryCardsSkeleton from './skeletons/SummaryCardsSkeleton';
+import ChartSkeleton from './skeletons/ChartSkeleton';
+import ConversationListSkeleton from './skeletons/ConversationListSkeleton';
 
 export default function UsageDashboard() {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -51,6 +55,7 @@ export default function UsageDashboard() {
     limit: conversationsPageSize,
     offset: conversationsPage * conversationsPageSize,
     includeDeleted: conversationsIncludeDeleted,
+    search: conversationsSearchQuery,
     enabled: activeTab === 'conversations'
   });
 
@@ -181,11 +186,23 @@ export default function UsageDashboard() {
     >
       {activeTab === 'overview' && (
         <div>
-          {summaryData.loading && <LoadingSpinner message="Loading usage summary..." />}
           {summaryData.error && <ErrorMessage error={summaryData.error} onRetry={summaryData.refetch} />}
-          {summaryData.data && (
+          {summaryData.loading ? (
             <div className="space-y-6">
-              <SummaryCards data={summaryData.data.summary} />
+              <SummaryCardsSkeleton />
+              <div className="space-y-6">
+                <ChartSkeleton />
+                <ChartSkeleton />
+                <ChartSkeleton />
+              </div>
+            </div>
+          ) : summaryData.data ? (
+            <div className="space-y-6">
+              <SummaryCards
+                data={summaryData.data.summary}
+                startDate={dateRange.start.toISOString()}
+                endDate={dateRange.end.toISOString()}
+              />
 
               <div className="space-y-6">
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -210,15 +227,16 @@ export default function UsageDashboard() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
       {activeTab === 'conversations' && (
         <div>
-          {conversationsData.loading && <LoadingSpinner message="Loading conversations..." />}
           {conversationsData.error && <ErrorMessage error={conversationsData.error} onRetry={conversationsData.refetch} />}
-          {conversationsData.data && (
+          {conversationsData.loading ? (
+            <ConversationListSkeleton rowCount={conversationsPageSize} />
+          ) : conversationsData.data ? (
             <ConversationList
               conversations={conversationsData.data.conversations}
               totalCount={conversationsData.data.pagination.total_count}
@@ -236,101 +254,33 @@ export default function UsageDashboard() {
               onConversationClick={handleConversationClick}
               onExport={handleConversationExport}
             />
-          )}
+          ) : null}
         </div>
       )}
 
       {activeTab === 'tools' && (
         <div>
-          {toolsData.loading && <LoadingSpinner message="Loading tool usage..." />}
           {toolsData.error && <ErrorMessage error={toolsData.error} onRetry={toolsData.refetch} />}
-          {toolsData.data && (
+          {toolsData.loading ? (
+            <ChartSkeleton />
+          ) : toolsData.data ? (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Tool Usage
-                </h2>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Calls</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {toolsData.data.summary.total_tool_calls}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Execution Time</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {(toolsData.data.summary.total_execution_time_ms / 1000).toFixed(2)}s
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Success Rate</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {(toolsData.data.summary.average_success_rate * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Raw Data (Phase 10 will add visualizations)
-                  </h3>
-                  <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-96">
-                    {JSON.stringify(toolsData.data, null, 2)}
-                  </pre>
-                </div>
-              </div>
+              <ToolUsageChart data={toolsData.data} />
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
       {activeTab === 'models' && (
         <div>
-          {modelsData.loading && <LoadingSpinner message="Loading model usage..." />}
           {modelsData.error && <ErrorMessage error={modelsData.error} onRetry={modelsData.refetch} />}
-          {modelsData.data && (
+          {modelsData.loading ? (
+            <ChartSkeleton />
+          ) : modelsData.data ? (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Model Usage
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Models Used</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {modelsData.data.summary.total_models_used}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Cost</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      ${modelsData.data.summary.total_cost.toFixed(4)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Most Used</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {modelsData.data.summary.most_used_model || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Most Expensive</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {modelsData.data.summary.most_expensive_model || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Raw Data (Phase 10 will add visualizations)
-                  </h3>
-                  <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-96">
-                    {JSON.stringify(modelsData.data, null, 2)}
-                  </pre>
-                </div>
-              </div>
+              <ModelDistributionChart data={modelsData.data} />
             </div>
-          )}
+          ) : null}
         </div>
       )}
 

@@ -176,6 +176,7 @@ export interface ConversationCostQuery {
   limit?: number;
   offset?: number;
   include_deleted?: boolean;
+  search?: string;
 }
 
 // ============================================================================
