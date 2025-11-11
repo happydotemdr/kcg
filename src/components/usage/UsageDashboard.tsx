@@ -10,6 +10,7 @@ import { useUsageSummary, useConversations, useToolsBreakdown, useModelsBreakdow
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import SummaryCards from './SummaryCards';
+import ConversationList from './ConversationList';
 
 export default function UsageDashboard() {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -19,6 +20,15 @@ export default function UsageDashboard() {
   });
 
   const [activeTab, setActiveTab] = useState<'overview' | 'conversations' | 'tools' | 'models'>('overview');
+
+  // Conversations tab state
+  const [conversationsPage, setConversationsPage] = useState(0);
+  const [conversationsPageSize, setConversationsPageSize] = useState(50);
+  const [conversationsSortBy, setConversationsSortBy] = useState<'cost' | 'tokens' | 'date'>('cost');
+  const [conversationsSortOrder, setConversationsSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [conversationsSearchQuery, setConversationsSearchQuery] = useState('');
+  const [conversationsIncludeDeleted, setConversationsIncludeDeleted] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   // Fetch data with hooks (only fetch for active tab)
   const summaryData = useUsageSummary({
@@ -31,10 +41,11 @@ export default function UsageDashboard() {
   const conversationsData = useConversations({
     startDate: dateRange.start,
     endDate: dateRange.end,
-    sortBy: 'cost',
-    sortOrder: 'desc',
-    limit: 50,
-    offset: 0,
+    sortBy: conversationsSortBy,
+    sortOrder: conversationsSortOrder,
+    limit: conversationsPageSize,
+    offset: conversationsPage * conversationsPageSize,
+    includeDeleted: conversationsIncludeDeleted,
     enabled: activeTab === 'conversations'
   });
 
@@ -49,6 +60,75 @@ export default function UsageDashboard() {
     endDate: dateRange.end,
     enabled: activeTab === 'models'
   });
+
+  // ============================================================================
+  // Conversation List Handlers
+  // ============================================================================
+
+  const handleConversationPageChange = (page: number) => {
+    setConversationsPage(page);
+  };
+
+  const handleConversationPageSizeChange = (size: number) => {
+    setConversationsPageSize(size);
+    setConversationsPage(0); // Reset to first page when changing page size
+  };
+
+  const handleConversationSortChange = (
+    sortBy: 'cost' | 'tokens' | 'date',
+    sortOrder: 'asc' | 'desc'
+  ) => {
+    setConversationsSortBy(sortBy);
+    setConversationsSortOrder(sortOrder);
+  };
+
+  const handleConversationSearchChange = (query: string) => {
+    setConversationsSearchQuery(query);
+    setConversationsPage(0); // Reset to first page when searching
+  };
+
+  const handleConversationIncludeDeletedChange = (include: boolean) => {
+    setConversationsIncludeDeleted(include);
+    setConversationsPage(0); // Reset to first page when changing filter
+  };
+
+  const handleConversationClick = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    // TODO: Open conversation details modal
+    console.log('Conversation clicked:', conversationId);
+  };
+
+  const handleConversationExport = async (format: 'csv' | 'json') => {
+    try {
+      const queryParams = new URLSearchParams({
+        start_date: dateRange.start.toISOString().split('T')[0],
+        end_date: dateRange.end.toISOString().split('T')[0],
+        format: format,
+        include_deleted: conversationsIncludeDeleted.toString()
+      });
+
+      const response = await fetch(`/api/usage/export?${queryParams}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `usage-export-${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  };
 
   return (
     <UsageDashboardLayout
@@ -82,21 +162,23 @@ export default function UsageDashboard() {
           {conversationsData.loading && <LoadingSpinner message="Loading conversations..." />}
           {conversationsData.error && <ErrorMessage error={conversationsData.error} onRetry={conversationsData.refetch} />}
           {conversationsData.data && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Conversations ({conversationsData.data.pagination.total_count})
-                </h2>
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Raw Data (Phase 9 will add table view)
-                  </h3>
-                  <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-96">
-                    {JSON.stringify(conversationsData.data, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </div>
+            <ConversationList
+              conversations={conversationsData.data.conversations}
+              totalCount={conversationsData.data.pagination.total_count}
+              currentPage={conversationsPage}
+              pageSize={conversationsPageSize}
+              sortBy={conversationsSortBy}
+              sortOrder={conversationsSortOrder}
+              includeDeleted={conversationsIncludeDeleted}
+              searchQuery={conversationsSearchQuery}
+              onPageChange={handleConversationPageChange}
+              onPageSizeChange={handleConversationPageSizeChange}
+              onSortChange={handleConversationSortChange}
+              onSearchChange={handleConversationSearchChange}
+              onIncludeDeletedChange={handleConversationIncludeDeletedChange}
+              onConversationClick={handleConversationClick}
+              onExport={handleConversationExport}
+            />
           )}
         </div>
       )}
